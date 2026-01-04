@@ -1,0 +1,9 @@
+services:
+  app:
+    image: lorisleiva/laravel-docker:8.5
+    userns_mode: "host"
+    user: "1000:1000"
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    command: tail -f /dev/null
