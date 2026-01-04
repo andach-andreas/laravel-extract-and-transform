@@ -31,7 +31,7 @@ class FluentSyncTest extends TestCase
         parent::tearDown();
     }
 
-    public function testItRunsAFullFluentWorkflow(): void
+    public function test_it_runs_a_full_fluent_workflow(): void
     {
         // 1. Create a source and a dummy file
         $path = $this->fixturesPath.'/test.csv';
@@ -66,7 +66,7 @@ class FluentSyncTest extends TestCase
         $this->assertFalse(Schema::hasColumn('products_v2', 'product_name'));
     }
 
-    public function testItHandlesSchemaEvolutionWithoutExplicitTable(): void
+    public function test_it_handles_schema_evolution_without_explicit_table(): void
     {
         $path = $this->fixturesPath.'/evolution.csv';
         File::put($path, "id,name,price\n1,Widget,10.00");
@@ -95,7 +95,7 @@ class FluentSyncTest extends TestCase
         $this->assertTrue(Schema::hasColumn('evolution_v2', 'price'));
     }
 
-    public function testItHandlesSchemaEvolutionWithExplicitTable(): void
+    public function test_it_handles_schema_evolution_with_explicit_table(): void
     {
         $path = $this->fixturesPath.'/explicit.csv';
         File::put($path, "id,name,price\n1,Widget,10.00");

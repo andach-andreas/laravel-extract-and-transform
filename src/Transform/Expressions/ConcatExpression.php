@@ -25,6 +25,7 @@ class ConcatExpression implements Expression
                 // It's an expression object (e.g., Expr::col('brand')), compile it
                 return $this->unwrapRaw($part->compile($query), $grammar);
             }
+
             // It's a raw string, treat it as a literal
             return $grammar->quoteString((string) $part);
         }, $this->parts);
@@ -32,18 +33,18 @@ class ConcatExpression implements Expression
         $driver = $query->getConnection()->getDriverName();
 
         if ($driver === 'sqlite') {
-             return DB::raw(implode(' || ', $compiledParts));
+            return DB::raw(implode(' || ', $compiledParts));
         }
 
         // Standard SQL CONCAT for MySQL, Postgres, etc.
-        return DB::raw("CONCAT(" . implode(', ', $compiledParts) . ")");
+        return DB::raw('CONCAT('.implode(', ', $compiledParts).')');
     }
 
     public function toArray(): array
     {
         return [
             'type' => 'concat',
-            'parts' => array_map(fn($p) => $p instanceof Expression ? $p->toArray() : $p, $this->parts),
+            'parts' => array_map(fn ($p) => $p instanceof Expression ? $p->toArray() : $p, $this->parts),
         ];
     }
 
@@ -52,6 +53,7 @@ class ConcatExpression implements Expression
         if ($value instanceof \Illuminate\Database\Query\Expression) {
             return $value->getValue($grammar);
         }
+
         return $value;
     }
 }

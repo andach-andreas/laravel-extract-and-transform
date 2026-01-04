@@ -18,6 +18,7 @@ class MapExpression implements Expression
     public function default(mixed $value): self
     {
         $this->defaultValue = $value;
+
         return $this;
     }
 
@@ -38,10 +39,10 @@ class MapExpression implements Expression
             $d = is_numeric($this->defaultValue) ? $this->defaultValue : $grammar->quoteString($this->defaultValue);
             $sql .= " ELSE {$d}";
         } else {
-            $sql .= " ELSE NULL";
+            $sql .= ' ELSE NULL';
         }
 
-        $sql .= " END";
+        $sql .= ' END';
 
         return DB::raw($sql);
     }

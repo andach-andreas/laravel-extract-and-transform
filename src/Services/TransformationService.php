@@ -4,10 +4,9 @@ namespace Andach\ExtractAndTransform\Services;
 
 use Andach\ExtractAndTransform\Models\Transformation;
 use Andach\ExtractAndTransform\Models\TransformationRun;
+use Andach\ExtractAndTransform\Transform\Expr;
 use Andach\ExtractAndTransform\Transform\Expression;
 use Andach\ExtractAndTransform\Transform\ExpressionFactory;
-use Andach\ExtractAndTransform\Transform\Expr;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
@@ -43,7 +42,7 @@ class TransformationService
                 $transformation->update(['active_version' => 1]);
             }
 
-            $destTable = $transformation->destination_table_pattern . '_v' . $version;
+            $destTable = $transformation->destination_table_pattern.'_v'.$version;
 
             // 2. Build the Select Query
             $query = DB::table($transformation->source_table);
@@ -102,7 +101,7 @@ class TransformationService
             $run->update([
                 'status' => 'failed',
                 'finished_at' => now(),
-                'log_message' => $e->getMessage()
+                'log_message' => $e->getMessage(),
             ]);
             throw $e;
         }
@@ -115,6 +114,7 @@ class TransformationService
         if ($value instanceof \Illuminate\Database\Query\Expression) {
             return $value->getValue($this->grammar());
         }
+
         return $value;
     }
 

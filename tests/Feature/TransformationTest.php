@@ -46,7 +46,7 @@ class TransformationTest extends TestCase
                 'name' => 'Widget',
                 'status' => 'live',
                 'price' => 100.00,
-                'cat_id' => 1
+                'cat_id' => 1,
             ],
             [
                 'remote_id' => 'P002',
@@ -54,12 +54,12 @@ class TransformationTest extends TestCase
                 'name' => 'Chair',
                 'status' => 'draft',
                 'price' => 50.00,
-                'cat_id' => 2
+                'cat_id' => 2,
             ],
         ]);
     }
 
-    public function testItCanRunASimpleTransformation()
+    public function test_it_can_run_a_simple_transformation()
     {
         $run = ExtractAndTransform::transform('Simple Transform')
             ->from('raw_products')
@@ -84,7 +84,7 @@ class TransformationTest extends TestCase
         $this->assertEquals('Electronics', $p1->category_name);
     }
 
-    public function testItCanChainTransformations()
+    public function test_it_can_chain_transformations()
     {
         $run = ExtractAndTransform::transform('Chained Transform')
             ->from('raw_products')
@@ -93,8 +93,8 @@ class TransformationTest extends TestCase
                 'final_price' => Expr::col('price')->multiply(1.2)->add(5),
                 'report_name' => Expr::concat(Expr::col('brand'), ': ', Expr::col('name'))->upper(),
                 'category_slug' => Expr::lookup('categories', 'cat_id', 'id', 'name')
-                                        ->lower()
-                                        ->replace(' ', '-'),
+                    ->lower()
+                    ->replace(' ', '-'),
             ])
             ->toTable('chained_products')
             ->run();

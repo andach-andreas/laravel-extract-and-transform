@@ -47,6 +47,7 @@ class MathExpression implements Expression
         if ($value instanceof \Illuminate\Database\Query\Expression) {
             return $value->getValue($grammar);
         }
+
         return $value;
     }
 }

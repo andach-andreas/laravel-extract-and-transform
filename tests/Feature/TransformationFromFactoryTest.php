@@ -32,7 +32,7 @@ class TransformationFromFactoryTest extends TestCase
         ]);
     }
 
-    public function testItCanRunTransformationFromStoredJsonConfig()
+    public function test_it_can_run_transformation_from_stored_json_config()
     {
         // Construct the JSON configuration manually to simulate what a GUI would save
         $config = [
@@ -42,29 +42,29 @@ class TransformationFromFactoryTest extends TestCase
                     'function' => 'LOWER',
                     'column' => [
                         'type' => 'column',
-                        'column' => 'order_ref'
+                        'column' => 'order_ref',
                     ],
-                    'arguments' => []
+                    'arguments' => [],
                 ],
                 'total' => [
                     'type' => 'math',
                     'operator' => '+',
                     'left' => [
                         'type' => 'column',
-                        'column' => 'subtotal'
+                        'column' => 'subtotal',
                     ],
                     'right' => [
                         'type' => 'column',
-                        'column' => 'tax'
-                    ]
+                        'column' => 'tax',
+                    ],
                 ],
                 'is_paid' => [
                     'type' => 'map',
                     'column' => 'status',
                     'mapping' => ['paid' => 1],
-                    'default' => 0
-                ]
-            ]
+                    'default' => 0,
+                ],
+            ],
         ];
 
         // Create the Transformation model directly
@@ -73,7 +73,7 @@ class TransformationFromFactoryTest extends TestCase
             'source_table' => 'raw_orders',
             'destination_table_pattern' => 'processed_orders',
             'configuration' => $config,
-            'active_version' => 0
+            'active_version' => 0,
         ]);
 
         // Run the service without passing explicit selects

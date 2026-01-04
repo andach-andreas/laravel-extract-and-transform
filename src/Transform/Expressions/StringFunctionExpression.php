@@ -23,7 +23,7 @@ class StringFunctionExpression implements Expression
         $grammar = $query->getGrammar();
         $columnSql = $this->unwrapRaw($this->column->compile($query), $grammar);
 
-        $args = array_map(fn($arg) => $grammar->quoteString($arg), $this->arguments);
+        $args = array_map(fn ($arg) => $grammar->quoteString($arg), $this->arguments);
         $allArgs = implode(', ', array_merge([$columnSql], $args));
 
         return DB::raw("{$this->function}({$allArgs})");
@@ -44,6 +44,7 @@ class StringFunctionExpression implements Expression
         if ($value instanceof \Illuminate\Database\Query\Expression) {
             return $value->getValue($grammar);
         }
+
         return $value;
     }
 }

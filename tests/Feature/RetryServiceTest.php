@@ -11,7 +11,7 @@ class RetryServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function testItRetriesAFailingOperationAndThenSucceeds(): void
+    public function test_it_retries_a_failing_operation_and_then_succeeds(): void
     {
         $retryService = app(RetryService::class);
         $attempts = 0;
@@ -29,7 +29,7 @@ class RetryServiceTest extends TestCase
         $this->assertEquals('success', $result);
     }
 
-    public function testItThrowsAnExceptionAfterAllAttemptsFail(): void
+    public function test_it_throws_an_exception_after_all_attempts_fail(): void
     {
         $this->expectException(Exception::class);
         $this->expectExceptionMessage('Persistent failure');
