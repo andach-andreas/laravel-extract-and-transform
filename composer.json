@@ -1,12 +1,12 @@
 {
-    "name": "andach/extract-and-transform",
+    "name": "andach/laravel-extract-and-transform",
     "description": "This is my package extract-and-transform",
     "keywords": [
         "Andreas Christodolou",
         "laravel",
         "extract-and-transform"
     ],
-    "homepage": "https://github.com//extract-and-transform",
+    "homepage": "https://github.com/andach-andreas/laravel-extract-and-transform",
     "license": "MIT",
     "authors": [
         {
