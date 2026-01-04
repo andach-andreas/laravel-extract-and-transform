@@ -51,6 +51,7 @@ class ExpressionFactory
         if (array_key_exists('default', $config)) {
             $expr->default($config['default']);
         }
+
         return $expr;
     }
 }

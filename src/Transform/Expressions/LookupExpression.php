@@ -21,7 +21,7 @@ class LookupExpression implements Expression
     public function compile(Builder $query): mixed
     {
         // Deterministic alias to allow multiple lookups to the same table/key combo
-        $alias = "lkp_" . substr(md5($this->targetTable . $this->localKey . $this->foreignKey), 0, 8);
+        $alias = 'lkp_'.substr(md5($this->targetTable.$this->localKey.$this->foreignKey), 0, 8);
 
         // Get the main table from the query to fully qualify the local key
         $sourceTable = $query->from;
@@ -43,6 +43,7 @@ class LookupExpression implements Expression
         }
 
         $grammar = $query->getGrammar();
+
         return DB::raw($grammar->wrap("{$alias}.{$this->targetColumn}"));
     }
 

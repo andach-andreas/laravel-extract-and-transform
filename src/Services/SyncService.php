@@ -75,7 +75,7 @@ final class SyncService
             // Enhance error message for common schema mismatch scenarios
             if ($e instanceof QueryException && $e->getCode() === '42S22') {
                 $msg = "Column mismatch detected. This usually happens when you add columns to the mapping but force the sync to use an existing table that lacks these columns.\n";
-                $msg .= "Original Error: " . $e->getMessage();
+                $msg .= 'Original Error: '.$e->getMessage();
                 $e = new Exception($msg, 0, $e);
             }
 

@@ -27,11 +27,11 @@ class SqlTest extends TestCase
         ]);
     }
 
-    public function testItCanSyncFromASqlTable()
+    public function test_it_can_sync_from_a_sql_table()
     {
         // We use the 'testing' connection which is already set up in TestCase
         ExtractAndTransform::createSource('Local SQL', 'sql', [
-            'connection' => 'testing'
+            'connection' => 'testing',
         ]);
 
         ExtractAndTransform::source('Local SQL')
@@ -48,10 +48,10 @@ class SqlTest extends TestCase
         $this->assertEquals('alice@example.com', $alice->email);
     }
 
-    public function testItCanSyncWithColumnMapping()
+    public function test_it_can_sync_with_column_mapping()
     {
         ExtractAndTransform::createSource('Local SQL', 'sql', [
-            'connection' => 'testing'
+            'connection' => 'testing',
         ]);
 
         ExtractAndTransform::source('Local SQL')
@@ -59,7 +59,7 @@ class SqlTest extends TestCase
             ->withStrategy('full_refresh')
             ->mapColumns([
                 'name' => 'full_name',
-                'email' => 'contact_email'
+                'email' => 'contact_email',
             ])
             ->toTable('mapped_users')
             ->run();

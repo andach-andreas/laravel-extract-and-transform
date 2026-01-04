@@ -16,10 +16,10 @@ class CSVTest extends TestCase
         Storage::fake('local');
     }
 
-    public function testItCanSyncFromALocalCsvFileUsingAbsolutePath()
+    public function test_it_can_sync_from_a_local_csv_file_using_absolute_path()
     {
         // Create a temporary CSV file
-        $path = sys_get_temp_dir() . '/test_products.csv';
+        $path = sys_get_temp_dir().'/test_products.csv';
         $content = "id,name,price\n1,Widget,10.50\n2,Gadget,20.00";
         file_put_contents($path, $content);
 
@@ -43,7 +43,7 @@ class CSVTest extends TestCase
         }
     }
 
-    public function testItCanSyncFromACsvOnAStorageDisk()
+    public function test_it_can_sync_from_a_csv_on_a_storage_disk()
     {
         // Setup fake storage
         Storage::fake('s3');
@@ -54,7 +54,7 @@ class CSVTest extends TestCase
 
         ExtractAndTransform::createSource('S3 CSV', 'csv', [
             'disk' => 's3',
-            'path' => $path
+            'path' => $path,
         ]);
 
         ExtractAndTransform::source('S3 CSV')
@@ -71,20 +71,20 @@ class CSVTest extends TestCase
         $this->assertEquals(50, $hammer->stock);
     }
 
-    public function testItHandlesMissingFilesGracefully()
+    public function test_it_handles_missing_files_gracefully()
     {
         Storage::fake('sftp');
         $path = 'missing.csv';
 
         ExtractAndTransform::createSource('Missing CSV', 'csv', [
             'disk' => 'sftp',
-            'path' => $path
+            'path' => $path,
         ]);
 
         $this->expectException(\RuntimeException::class);
         // The message might vary slightly depending on where it fails (test vs streamRows)
         // but our code throws "Failed to open stream..." in streamRows
-        $this->expectExceptionMessage("Failed to open stream for CSV file on disk [sftp]: missing.csv");
+        $this->expectExceptionMessage('Failed to open stream for CSV file on disk [sftp]: missing.csv');
 
         ExtractAndTransform::source('Missing CSV')
             ->sync($path)

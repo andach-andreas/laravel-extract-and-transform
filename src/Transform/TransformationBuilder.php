@@ -8,9 +8,13 @@ use Andach\ExtractAndTransform\Services\TransformationService;
 class TransformationBuilder
 {
     private string $name;
+
     private string $sourceTable;
+
     private string $destinationTablePattern;
+
     private array $selects = [];
+
     private array $wheres = [];
 
     public function __construct(string $name)
@@ -21,18 +25,21 @@ class TransformationBuilder
     public function from(string $table): self
     {
         $this->sourceTable = $table;
+
         return $this;
     }
 
     public function select(array $columns): self
     {
         $this->selects = $columns;
+
         return $this;
     }
 
     public function toTable(string $pattern): self
     {
         $this->destinationTablePattern = $pattern;
+
         return $this;
     }
 
@@ -40,7 +47,7 @@ class TransformationBuilder
     {
         // Persist configuration
         $config = [
-            'selects' => array_map(fn($expr) => $expr instanceof Expression ? $expr->toArray() : $expr, $this->selects),
+            'selects' => array_map(fn ($expr) => $expr instanceof Expression ? $expr->toArray() : $expr, $this->selects),
             'wheres' => $this->wheres,
         ];
 
