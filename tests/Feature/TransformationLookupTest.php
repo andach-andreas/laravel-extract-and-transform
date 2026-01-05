@@ -45,7 +45,7 @@ class TransformationLookupTest extends TestCase
         Schema::create('cities', function ($table) {
             $table->id();
             $table->string('name');
-            $table->unsignedBigInteger('country_id');
+            $table->unsignedBigInteger('country_id')->nullable();
         });
 
         // 5. Lookup Table 4 (Countries)
@@ -63,11 +63,15 @@ class TransformationLookupTest extends TestCase
         DB::table('cities')->insert([
             ['id' => 10, 'name' => 'New York', 'country_id' => 1],
             ['id' => 20, 'name' => 'London', 'country_id' => 2],
+            ['id' => 30, 'name' => 'Lost City', 'country_id' => 99], // Invalid Country
         ]);
 
         DB::table('customers')->insert([
             ['id' => 101, 'name' => 'Alice', 'email' => 'alice@example.com', 'city_id' => 10],
             ['id' => 102, 'name' => 'Bob', 'email' => 'bob@example.com', 'city_id' => 20],
+            ['id' => 103, 'name' => 'Charlie', 'email' => 'charlie@example.com', 'city_id' => 99], // Invalid City
+            ['id' => 104, 'name' => 'Dave', 'email' => 'dave@example.com', 'city_id' => 30], // Valid City, Invalid Country
+            ['id' => 105, 'name' => 'Eve', 'email' => 'eve@example.com', 'city_id' => null], // No City
         ]);
 
         DB::table('statuses')->insert([
@@ -82,6 +86,9 @@ class TransformationLookupTest extends TestCase
             ['order_ref' => 'ORD-003', 'customer_id' => 999, 'status_code' => 'P'], // Unknown customer
             ['order_ref' => 'ORD-004', 'customer_id' => 101, 'status_code' => 'Z'], // Unknown status
             ['order_ref' => 'ORD-005', 'customer_id' => null, 'status_code' => null], // Nulls
+            ['order_ref' => 'ORD-006', 'customer_id' => 103, 'status_code' => 'P'], // Charlie (Invalid City)
+            ['order_ref' => 'ORD-007', 'customer_id' => 104, 'status_code' => 'P'], // Dave (Invalid Country)
+            ['order_ref' => 'ORD-008', 'customer_id' => 105, 'status_code' => 'P'], // Eve (Null City)
         ]);
     }
 
@@ -287,5 +294,36 @@ class TransformationLookupTest extends TestCase
 
         $this->assertEquals('USA', $rows[0]->country_name);
         $this->assertEquals('UK', $rows[1]->country_name);
+    }
+
+    public function test_chained_lookup_returns_null_on_missing_link()
+    {
+        // Order -> Customer -> City -> Country
+        $run = ExtractAndTransform::transform('Broken Chain Lookup')
+            ->from('orders')
+            ->select([
+                'ref' => 'order_ref',
+                'country_name' => Expr::lookup('customers', 'customer_id', 'id', 'city_id')
+                    ->then('cities', 'id', 'country_id')
+                    ->then('countries', 'id', 'name'),
+            ])
+            ->toTable('lookup_result_broken')
+            ->run();
+
+        $this->assertEquals('success', $run->status);
+
+        $rows = DB::table('lookup_result_broken_v1')->orderBy('ref')->get();
+
+        // ORD-006: Charlie -> City 99 (Missing) -> NULL
+        $rowCharlie = $rows->firstWhere('ref', 'ORD-006');
+        $this->assertNull($rowCharlie->country_name);
+
+        // ORD-007: Dave -> City 30 (Lost City) -> Country 99 (Missing) -> NULL
+        $rowDave = $rows->firstWhere('ref', 'ORD-007');
+        $this->assertNull($rowDave->country_name);
+
+        // ORD-008: Eve -> City NULL -> NULL
+        $rowEve = $rows->firstWhere('ref', 'ORD-008');
+        $this->assertNull($rowEve->country_name);
     }
 }
