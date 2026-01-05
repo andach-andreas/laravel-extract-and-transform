@@ -36,10 +36,9 @@ This example shows a connection to a CSV file. It will automatically search for 
 use Andach\ExtractAndTransform\Facades\ExtractAndTransform;
 
 $path = storage_path('app/products.csv');
-ExtractAndTransform::createSource('My Source', 'csv', ['path' => $path]);
+$source = ExtractAndTransform::createSource('My Source', 'csv', ['path' => $path]);
 
-$run = ExtractAndTransform::source('My Source')
-    ->sync($path)
+$run = $source->sync($path)
     ->withStrategy('full_refresh')
     ->mapColumns(['id' => 'remote_id', 'name' => 'product_name'])   // Optional
     ->toTable('products_v1')                                        // Optional
@@ -54,7 +53,7 @@ This example demonstrates connecting to an external MySQL database and syncing t
 use Andach\ExtractAndTransform\Facades\ExtractAndTransform;
 
 // 1. Create the Source (Connection) once
-ExtractAndTransform::createSource('Legacy DB', 'sql', [
+$source = ExtractAndTransform::createSource('Legacy DB', 'sql', [
     'driver' => 'mysql',
     'host' => '192.168.1.50',
     'database' => 'legacy_app',
@@ -63,15 +62,13 @@ ExtractAndTransform::createSource('Legacy DB', 'sql', [
 ]);
 
 // 2. Sync the 'users' table
-ExtractAndTransform::source('Legacy DB')
-    ->sync('users')
+$source->sync('users')
     ->withStrategy('full_refresh')
     ->toTable('legacy_users')
     ->run();
 
 // 3. Sync the 'orders' table
-ExtractAndTransform::source('Legacy DB')
-    ->sync('orders')
+$source->sync('orders')
     ->withStrategy('full_refresh')
     ->mapColumns(['order_id' => 'id', 'total_amount' => 'amount'])
     ->toTable('legacy_orders')
@@ -213,6 +210,26 @@ A **Source** represents the configuration required to connect to an external sys
 A **Sync** represents a specific dataset retrieved from a Source.
 *   **Examples:** The `users` table from a database, the `orders` endpoint from an API, or the contents of a CSV file.
 *   **Role:** It holds the state (mappings, schema versions, run history) and the strategy for that specific dataset.
+
+### Sync Strategies
+
+The package supports multiple strategies for synchronizing data, allowing you to choose the best approach for your specific use case.
+
+*   **`full_refresh`**: The simplest strategy. It truncates the local table and re-imports all data from the source. Best for small datasets or when the source does not support incremental updates.
+*   **`watermark`**: Efficient for large, append-only or mutable datasets. It uses a "watermark" column (e.g., `updated_at` or `id`) to fetch only rows that have changed or been added since the last sync.
+    *   **Modes:** Supports `append_only` (inserts new rows) and `upsert` (updates existing rows based on primary key).
+*   **`content_hash`**: Useful when the source lacks a reliable `updated_at` column. It calculates a hash of the row's content to detect changes. It can also detect and handle deletions (soft deletes) by comparing source and local hashes.
+*   **`id_diff`**: Fetches all IDs from the source and compares them with local IDs. It then fetches full rows only for new IDs. Useful for detecting new records and deletions when fetching the full dataset is too expensive, but fetching a list of IDs is cheap.
+
+### Metadata Columns
+
+The package automatically adds several reserved metadata columns to your local tables to manage synchronization state and history. You should **not** use these names for your own mapped columns.
+
+*   **`__id`**: The local primary key (BigInteger).
+*   **`__source_id`**: The original ID from the source (nullable).
+*   **`__content_hash`**: A hash of the row's content, used by the `content_hash` strategy.
+*   **`__is_deleted`**: A boolean flag indicating if the row has been deleted in the source (used by `content_hash` and `id_diff` strategies).
+*   **`__last_synced_at`**: The timestamp when the row was last synced/updated in the local table.
 
 ### Simple vs. Complex Workflows
 

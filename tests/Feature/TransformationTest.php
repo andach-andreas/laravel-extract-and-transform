@@ -114,4 +114,63 @@ class TransformationTest extends TestCase
         $this->assertEquals('BETA: CHAIR', $p2->report_name);
         $this->assertEquals('home-goods', $p2->category_slug);
     }
+
+    public function test_it_can_rerun_saved_transformation()
+    {
+        // 1. Define and run initially
+        ExtractAndTransform::transform('Saved Transform')
+            ->from('raw_products')
+            ->select([
+                'sku' => 'remote_id',
+                'price' => 'price',
+            ])
+            ->toTable('saved_products')
+            ->run();
+
+        // 2. Modify data to prove re-run works on fresh data
+        DB::table('raw_products')->insert([
+            'remote_id' => 'P003',
+            'brand' => 'Gamma',
+            'name' => 'Table',
+            'status' => 'live',
+            'price' => 200.00,
+            'cat_id' => 2,
+        ]);
+
+        // 3. Retrieve and re-run
+        $transformation = ExtractAndTransform::getTransformation('Saved Transform');
+        $this->assertNotNull($transformation);
+
+        $run = $transformation->run();
+
+        $this->assertEquals('success', $run->status);
+        $this->assertEquals(3, $run->rows_affected); // Should include the new row
+
+        $p3 = DB::table('saved_products_v1')->where('sku', 'P003')->first();
+        $this->assertNotNull($p3);
+        $this->assertEquals(200.00, $p3->price);
+    }
+
+    public function test_it_can_save_transformation_without_running()
+    {
+        // 1. Define and save ONLY
+        $transformation = ExtractAndTransform::transform('Deferred Transform')
+            ->from('raw_products')
+            ->select([
+                'sku' => 'remote_id',
+                'price' => 'price',
+            ])
+            ->toTable('deferred_products')
+            ->save();
+
+        $this->assertInstanceOf(\Andach\ExtractAndTransform\Models\Transformation::class, $transformation);
+        $this->assertFalse(Schema::hasTable('deferred_products_v1')); // Should NOT exist yet
+
+        // 2. Run it later
+        $run = $transformation->run();
+
+        $this->assertEquals('success', $run->status);
+        $this->assertTrue(Schema::hasTable('deferred_products_v1'));
+        $this->assertEquals(2, $run->rows_affected);
+    }
 }

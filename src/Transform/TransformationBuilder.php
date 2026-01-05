@@ -43,7 +43,7 @@ class TransformationBuilder
         return $this;
     }
 
-    public function run()
+    public function save(): Transformation
     {
         // Persist configuration
         $config = [
@@ -51,7 +51,7 @@ class TransformationBuilder
             'wheres' => $this->wheres,
         ];
 
-        $transformation = Transformation::updateOrCreate(
+        return Transformation::updateOrCreate(
             ['name' => $this->name],
             [
                 'source_table' => $this->sourceTable,
@@ -59,6 +59,11 @@ class TransformationBuilder
                 'configuration' => $config,
             ]
         );
+    }
+
+    public function run()
+    {
+        $transformation = $this->save();
 
         return app(TransformationService::class)->run($transformation, $this->selects);
     }

@@ -24,15 +24,12 @@ File::put($csvPath, "id,name,price\n1,Blue Widget,10.00\n2,Red Widget,12.50");
 
 // --- 2. Define and Save the Data Source ---
 // This tells the package where to find the data. We give it a name to reference later.
-$source = ExtractSource::firstOrCreate(
-    ['name' => 'My CSV Warehouse'],
-    ['connector' => 'csv', 'config' => ['path' => $csvPath]]
-);
+$source = $extractor->createSource('My CSV Warehouse', 'csv', ['path' => $csvPath]);
 
 // --- 3. Create the Sync Profile ---
 // This is the main "recipe" for the sync job. It defines the source, dataset, and strategy.
 $profile = SyncProfile::create([
-    'extract_source_id' => $source->id,
+    'extract_source_id' => $source->getModel()->id,
     'dataset_identifier' => $csvPath,
     'strategy' => 'full_refresh',
 ]);
@@ -42,7 +39,7 @@ $profile = SyncProfile::create([
 // You must create and activate a version before you can run a sync.
 
 // First, get the live schema from the source to create a "fingerprint" hash.
-$liveSchema = $extractor->source($source->connector, $source->config)->getDataset($csvPath)->getSchema();
+$liveSchema = $source->getDataset($csvPath)->getSchema();
 $liveSchemaHash = hash('sha256', json_encode($liveSchema->fields));
 
 // Create the new version with your desired mapping.
@@ -78,7 +75,7 @@ try {
     echo 'Sync correctly failed as expected: '.$e->getMessage()."\n";
 
     // To fix this, we create and activate a new version (v2).
-    $newLiveSchema = $extractor->source($source->connector, $source->config)->getDataset($csvPath)->getSchema();
+    $newLiveSchema = $source->getDataset($csvPath)->getSchema();
     $newLiveSchemaHash = hash('sha256', json_encode($newLiveSchema->fields));
 
     $v2 = $profile->newVersion(

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
-        $prefix = config('extract-data.internal_table_prefix', 'andach_led_');
+        $prefix = config('extract-data.internal_table_prefix', 'andach_leat_');
 
         Schema::create($prefix . 'extract_sources', function (Blueprint $table) {
             $table->id();
@@ -87,7 +87,7 @@ return new class extends Migration {
 
     public function down(): void
     {
-        $prefix = config('extract-data.internal_table_prefix', 'andach_led_');
+        $prefix = config('extract-data.internal_table_prefix', 'andach_leat_');
 
         Schema::dropIfExists($prefix . 'transformation_runs');
         Schema::dropIfExists($prefix . 'transformations');

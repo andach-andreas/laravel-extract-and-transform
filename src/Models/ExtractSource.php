@@ -20,7 +20,7 @@ final class ExtractSource extends Model
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->setTable(config('extract-data.internal_table_prefix', 'andach_led_').'extract_sources');
+        $this->setTable(config('extract-data.internal_table_prefix', 'andach_leat_').'extract_sources');
     }
 
     protected static function newFactory(): ExtractSourceFactory

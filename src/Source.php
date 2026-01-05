@@ -12,6 +12,11 @@ class Source
         private readonly ExtractAndTransform $extractor
     ) {}
 
+    public function getModel(): ExtractSource
+    {
+        return $this->model;
+    }
+
     public function sync(string $datasetIdentifier): Sync
     {
         $profile = $this->model->syncProfiles()->firstOrNew(

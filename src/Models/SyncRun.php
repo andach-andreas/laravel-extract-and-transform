@@ -22,7 +22,7 @@ final class SyncRun extends Model
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->setTable(config('extract-data.internal_table_prefix', 'andach_led_').'sync_runs');
+        $this->setTable(config('extract-data.internal_table_prefix', 'andach_leat_').'sync_runs');
     }
 
     protected static function newFactory(): SyncRunFactory

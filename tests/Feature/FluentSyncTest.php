@@ -36,11 +36,10 @@ class FluentSyncTest extends TestCase
         // 1. Create a source and a dummy file
         $path = $this->fixturesPath.'/test.csv';
         File::put($path, "id,name,email\n1,test1,test1@example.com");
-        ExtractAndTransform::createSource('My Source', 'csv', ['path' => $path]);
+        $source = ExtractAndTransform::createSource('My Source', 'csv', ['path' => $path]);
 
         // 2. Run the first sync with initial mapping
-        $run1 = ExtractAndTransform::source('My Source')
-            ->sync($path)
+        $run1 = $source->sync($path)
             ->withStrategy('full_refresh')
             ->mapColumns(['id' => 'remote_id', 'name' => 'product_name'])
             ->toTable('products_v1')
@@ -52,8 +51,7 @@ class FluentSyncTest extends TestCase
         $this->assertFalse(Schema::hasColumn('products_v1', 'email')); // Was not in mapping
 
         // 3. Change the mapping and run again
-        $run2 = ExtractAndTransform::source('My Source')
-            ->sync($path)
+        $run2 = $source->sync($path)
             ->withStrategy('full_refresh')
             ->mapColumns(['id' => 'remote_id', 'name' => 'name', 'email' => 'contact_email'])
             ->toTable('products_v2')
@@ -70,11 +68,10 @@ class FluentSyncTest extends TestCase
     {
         $path = $this->fixturesPath.'/evolution.csv';
         File::put($path, "id,name,price\n1,Widget,10.00");
-        ExtractAndTransform::createSource('Evolution Source', 'csv', ['path' => $path]);
+        $source = ExtractAndTransform::createSource('Evolution Source', 'csv', ['path' => $path]);
 
         // Run 1: Only map id and name
-        ExtractAndTransform::source('Evolution Source')
-            ->sync($path)
+        $source->sync($path)
             ->withStrategy('full_refresh')
             ->mapColumns(['id' => 'remote_id', 'name' => 'product_name'])
             ->toTable('evolution_v1')
@@ -85,8 +82,7 @@ class FluentSyncTest extends TestCase
 
         // Run 2: Add price, NO toTable call
         // Should auto-generate evolution_v2
-        $run2 = ExtractAndTransform::source('Evolution Source')
-            ->sync($path)
+        $run2 = $source->sync($path)
             ->mapColumns(['id' => 'remote_id', 'name' => 'product_name', 'price' => 'price'])
             ->run();
 
@@ -99,19 +95,17 @@ class FluentSyncTest extends TestCase
     {
         $path = $this->fixturesPath.'/explicit.csv';
         File::put($path, "id,name,price\n1,Widget,10.00");
-        ExtractAndTransform::createSource('Explicit Source', 'csv', ['path' => $path]);
+        $source = ExtractAndTransform::createSource('Explicit Source', 'csv', ['path' => $path]);
 
         // Run 1
-        ExtractAndTransform::source('Explicit Source')
-            ->sync($path)
+        $source->sync($path)
             ->withStrategy('full_refresh')
             ->mapColumns(['id' => 'remote_id', 'name' => 'product_name'])
             ->toTable('explicit_v1')
             ->run();
 
         // Run 2: Add price, Explicit toTable
-        $run2 = ExtractAndTransform::source('Explicit Source')
-            ->sync($path)
+        $run2 = $source->sync($path)
             ->mapColumns(['id' => 'remote_id', 'name' => 'product_name', 'price' => 'price'])
             ->toTable('explicit_v2')
             ->run();
@@ -119,5 +113,16 @@ class FluentSyncTest extends TestCase
         $this->assertEquals('success', $run2->status);
         $this->assertTrue(Schema::hasTable('explicit_v2'));
         $this->assertTrue(Schema::hasColumn('explicit_v2', 'price'));
+    }
+
+    public function test_source_exposes_underlying_model(): void
+    {
+        $path = $this->fixturesPath.'/model_test.csv';
+        File::put($path, "id\n1");
+        $source = ExtractAndTransform::createSource('Model Test Source', 'csv', ['path' => $path]);
+
+        $this->assertNotNull($source->getModel());
+        $this->assertNotNull($source->getModel()->id);
+        $this->assertEquals('Model Test Source', $source->getModel()->name);
     }
 }

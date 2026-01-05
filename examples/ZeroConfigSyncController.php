@@ -18,8 +18,7 @@ class ZeroConfigSyncController extends Controller
     public function __invoke(Request $request, ExtractAndTransform $extractor): JsonResponse
     {
         // 1. Define a simple SQL source
-        $source = $extractor->source('sql', ['connection' => 'mysql']);
-        $source->save('My Database');
+        $source = $extractor->createSource('My Database', 'sql', ['connection' => 'mysql']);
 
         // 2. Create a minimal Sync Profile
         $profile = SyncProfile::updateOrCreate(

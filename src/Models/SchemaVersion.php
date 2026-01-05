@@ -22,7 +22,7 @@ final class SchemaVersion extends Model
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->setTable(config('extract-data.internal_table_prefix', 'andach_led_').'schema_versions');
+        $this->setTable(config('extract-data.internal_table_prefix', 'andach_leat_').'schema_versions');
     }
 
     protected static function newFactory(): SchemaVersionFactory

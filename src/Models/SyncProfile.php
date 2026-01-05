@@ -19,7 +19,7 @@ final class SyncProfile extends Model
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
-        $this->setTable(config('extract-data.internal_table_prefix', 'andach_led_').'sync_profiles');
+        $this->setTable(config('extract-data.internal_table_prefix', 'andach_leat_').'sync_profiles');
     }
 
     protected static function newFactory(): SyncProfileFactory

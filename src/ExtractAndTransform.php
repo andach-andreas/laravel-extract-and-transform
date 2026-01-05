@@ -3,6 +3,7 @@
 namespace Andach\ExtractAndTransform;
 
 use Andach\ExtractAndTransform\Models\ExtractSource;
+use Andach\ExtractAndTransform\Models\Transformation;
 use Andach\ExtractAndTransform\Transform\TransformationBuilder;
 
 class ExtractAndTransform
@@ -32,5 +33,10 @@ class ExtractAndTransform
     public function transform(string $name): TransformationBuilder
     {
         return new TransformationBuilder($name);
+    }
+
+    public function getTransformation(string $name): ?Transformation
+    {
+        return Transformation::where('name', $name)->first();
     }
 }
