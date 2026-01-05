@@ -25,12 +25,7 @@ class ExpressionFactory
                 array_map(fn ($part) => self::make($part), $config['parts'])
             ),
             'map' => self::makeMapExpression($config),
-            'lookup' => new LookupExpression(
-                $config['target_table'],
-                $config['local_key'],
-                $config['foreign_key'],
-                $config['target_column']
-            ),
+            'lookup' => self::makeLookupExpression($config),
             'math' => new MathExpression(
                 self::make($config['left']),
                 $config['operator'],
@@ -53,5 +48,34 @@ class ExpressionFactory
         }
 
         return $expr;
+    }
+
+    private static function makeLookupExpression(array $config): LookupExpression
+    {
+        if (isset($config['steps'])) {
+            $first = $config['steps'][0];
+            $expr = new LookupExpression(
+                $first['table'],
+                $first['local'],
+                $first['foreign'],
+                $first['target']
+            );
+
+            // Add remaining steps
+            for ($i = 1; $i < count($config['steps']); $i++) {
+                $step = $config['steps'][$i];
+                $expr->then($step['table'], $step['foreign'], $step['target']);
+            }
+
+            return $expr;
+        }
+
+        // Legacy format
+        return new LookupExpression(
+            $config['target_table'],
+            $config['local_key'],
+            $config['foreign_key'],
+            $config['target_column']
+        );
     }
 }

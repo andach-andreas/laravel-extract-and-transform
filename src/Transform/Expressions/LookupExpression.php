@@ -11,50 +11,85 @@ class LookupExpression implements Expression
 {
     use HasStringFunctions;
 
+    private array $steps = [];
+
     public function __construct(
-        private string $targetTable,
-        private string $localKey,
-        private string $foreignKey,
-        private string $targetColumn
-    ) {}
+        string $targetTable,
+        string $localKey,
+        string $foreignKey,
+        string $targetColumn
+    ) {
+        $this->steps[] = [
+            'table' => $targetTable,
+            'local' => $localKey,
+            'foreign' => $foreignKey,
+            'target' => $targetColumn,
+        ];
+    }
+
+    public function then(string $targetTable, string $foreignKey, string $targetColumn): self
+    {
+        $previousStep = end($this->steps);
+
+        $this->steps[] = [
+            'table' => $targetTable,
+            'local' => $previousStep['target'], // Connect to previous result
+            'foreign' => $foreignKey,
+            'target' => $targetColumn,
+        ];
+
+        return $this;
+    }
 
     public function compile(Builder $query): mixed
     {
-        // Deterministic alias to allow multiple lookups to the same table/key combo
-        $alias = 'lkp_'.substr(md5($this->targetTable.$this->localKey.$this->foreignKey), 0, 8);
-
-        // Get the main table from the query to fully qualify the local key
         $sourceTable = $query->from;
-
-        // Check if this join is already added to avoid duplication
-        $alreadyJoined = false;
-        if ($query->joins) {
-            foreach ($query->joins as $join) {
-                // Laravel stores table as "table as alias" or just "table"
-                if (str_contains($join->table, " as {$alias}")) {
-                    $alreadyJoined = true;
-                    break;
-                }
-            }
-        }
-
-        if (! $alreadyJoined) {
-            $query->leftJoin("{$this->targetTable} as {$alias}", "{$sourceTable}.{$this->localKey}", '=', "{$alias}.{$this->foreignKey}");
-        }
-
         $grammar = $query->getGrammar();
 
-        return DB::raw($grammar->wrap("{$alias}.{$this->targetColumn}"));
+        foreach ($this->steps as $step) {
+            // Deterministic alias to allow multiple lookups to the same table/key combo
+            // We include the sourceTable in the hash to ensure uniqueness if the same lookup chain is used multiple times
+            // but starting from different points (though usually sourceTable is static for a query).
+            // More importantly, we need to ensure that if we have multiple lookups, they get different aliases.
+            // The previous implementation used md5($targetTable.$localKey.$foreignKey).
+            // Here we should include the step details.
+
+            $alias = 'lkp_'.substr(md5(json_encode($step).$sourceTable), 0, 10);
+
+            // Check if this join is already added to avoid duplication
+            $alreadyJoined = false;
+            if ($query->joins) {
+                foreach ($query->joins as $join) {
+                    if (str_contains($join->table, " as {$alias}")) {
+                        $alreadyJoined = true;
+                        break;
+                    }
+                }
+            }
+
+            if (! $alreadyJoined) {
+                $query->leftJoin(
+                    "{$step['table']} as {$alias}",
+                    "{$sourceTable}.{$step['local']}",
+                    '=',
+                    "{$alias}.{$step['foreign']}"
+                );
+            }
+
+            // The next join will hang off this alias
+            $sourceTable = $alias;
+        }
+
+        $lastStep = end($this->steps);
+
+        return DB::raw($grammar->wrap("{$sourceTable}.{$lastStep['target']}"));
     }
 
     public function toArray(): array
     {
         return [
             'type' => 'lookup',
-            'target_table' => $this->targetTable,
-            'local_key' => $this->localKey,
-            'foreign_key' => $this->foreignKey,
-            'target_column' => $this->targetColumn,
+            'steps' => $this->steps,
         ];
     }
 }

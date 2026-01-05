@@ -31,6 +31,7 @@ class TransformationLookupTest extends TestCase
             $table->id();
             $table->string('name');
             $table->string('email');
+            $table->unsignedBigInteger('city_id')->nullable();
         });
 
         // 3. Lookup Table 2 (Statuses) - using string key
@@ -40,10 +41,33 @@ class TransformationLookupTest extends TestCase
             $table->string('category');
         });
 
+        // 4. Lookup Table 3 (Cities)
+        Schema::create('cities', function ($table) {
+            $table->id();
+            $table->string('name');
+            $table->unsignedBigInteger('country_id');
+        });
+
+        // 5. Lookup Table 4 (Countries)
+        Schema::create('countries', function ($table) {
+            $table->id();
+            $table->string('name');
+        });
+
         // Seed Data
+        DB::table('countries')->insert([
+            ['id' => 1, 'name' => 'USA'],
+            ['id' => 2, 'name' => 'UK'],
+        ]);
+
+        DB::table('cities')->insert([
+            ['id' => 10, 'name' => 'New York', 'country_id' => 1],
+            ['id' => 20, 'name' => 'London', 'country_id' => 2],
+        ]);
+
         DB::table('customers')->insert([
-            ['id' => 101, 'name' => 'Alice', 'email' => 'alice@example.com'],
-            ['id' => 102, 'name' => 'Bob', 'email' => 'bob@example.com'],
+            ['id' => 101, 'name' => 'Alice', 'email' => 'alice@example.com', 'city_id' => 10],
+            ['id' => 102, 'name' => 'Bob', 'email' => 'bob@example.com', 'city_id' => 20],
         ]);
 
         DB::table('statuses')->insert([
@@ -187,5 +211,81 @@ class TransformationLookupTest extends TestCase
 
         $this->assertEquals('Alice', $rows[0]->customer_name);
         $this->assertEquals('Bob', $rows[1]->customer_name);
+    }
+
+    public function test_chained_lookup_via_then_method()
+    {
+        // Order -> Customer -> City -> Country
+        $run = ExtractAndTransform::transform('Grandfather Lookup')
+            ->from('orders')
+            ->select([
+                'ref' => 'order_ref',
+                'country_name' => Expr::lookup('customers', 'customer_id', 'id', 'city_id')
+                    ->then('cities', 'id', 'country_id')
+                    ->then('countries', 'id', 'name'),
+            ])
+            ->toTable('lookup_result_chain')
+            ->run();
+
+        $this->assertEquals('success', $run->status);
+
+        $rows = DB::table('lookup_result_chain_v1')->orderBy('ref')->get();
+
+        // Alice -> New York -> USA
+        $this->assertEquals('USA', $rows[0]->country_name);
+        // Bob -> London -> UK
+        $this->assertEquals('UK', $rows[1]->country_name);
+    }
+
+    public function test_chained_lookup_from_json_config()
+    {
+        $config = [
+            'selects' => [
+                'ref' => [
+                    'type' => 'column',
+                    'column' => 'order_ref',
+                ],
+                'country_name' => [
+                    'type' => 'lookup',
+                    'steps' => [
+                        [
+                            'table' => 'customers',
+                            'local' => 'customer_id',
+                            'foreign' => 'id',
+                            'target' => 'city_id',
+                        ],
+                        [
+                            'table' => 'cities',
+                            'local' => 'city_id', // Implied from previous target, but stored explicitly in steps
+                            'foreign' => 'id',
+                            'target' => 'country_id',
+                        ],
+                        [
+                            'table' => 'countries',
+                            'local' => 'country_id',
+                            'foreign' => 'id',
+                            'target' => 'name',
+                        ],
+                    ],
+                ],
+            ],
+            'wheres' => [],
+        ];
+
+        $transformation = Transformation::create([
+            'name' => 'JSON Chain Transform',
+            'source_table' => 'orders',
+            'destination_table_pattern' => 'lookup_result_json_chain',
+            'configuration' => $config,
+        ]);
+
+        $run = $transformation->run();
+
+        $this->assertEquals('success', $run->status);
+
+        $rows = DB::table('lookup_result_json_chain_v1')->orderBy('ref')->get();
+
+        $this->assertEquals('USA', $rows[0]->country_name);
+        $this->assertEquals('UK', $rows[1]->country_name);
     }
 }
