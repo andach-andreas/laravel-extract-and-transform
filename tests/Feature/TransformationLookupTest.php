@@ -326,4 +326,35 @@ class TransformationLookupTest extends TestCase
         $rowEve = $rows->firstWhere('ref', 'ORD-008');
         $this->assertNull($rowEve->country_name);
     }
+
+    public function test_combining_lookups_with_concat_and_string_functions()
+    {
+        // Format: "CITY (COUNTRY)"
+        $run = ExtractAndTransform::transform('Complex Lookup')
+            ->from('orders')
+            ->select([
+                'ref' => 'order_ref',
+                'location' => Expr::concat(
+                    Expr::lookup('customers', 'customer_id', 'id', 'city_id')
+                        ->then('cities', 'id', 'name'),
+                    ' (',
+                    Expr::lookup('customers', 'customer_id', 'id', 'city_id')
+                        ->then('cities', 'id', 'country_id')
+                        ->then('countries', 'id', 'name'),
+                    ')'
+                )->upper(),
+            ])
+            ->toTable('lookup_result_complex')
+            ->run();
+
+        $this->assertEquals('success', $run->status);
+
+        $rows = DB::table('lookup_result_complex_v1')->orderBy('ref')->get();
+
+        // Alice -> New York (USA) -> NEW YORK (USA)
+        $this->assertEquals('NEW YORK (USA)', $rows[0]->location);
+
+        // Bob -> London (UK) -> LONDON (UK)
+        $this->assertEquals('LONDON (UK)', $rows[1]->location);
+    }
 }
