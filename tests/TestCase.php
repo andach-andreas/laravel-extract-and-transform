@@ -38,7 +38,13 @@ abstract class TestCase extends Orchestra
         // Load the migration stub directly.
         // This is necessary because we are using a stub file for publishing,
         // but we need to run it as a real migration in the test environment.
-        $migration = include __DIR__.'/../database/migrations/create_andach_laravel_extract_data_tables.php.stub';
-        $migration->up();
+        $migration1 = include __DIR__.'/../database/migrations/create_andach_laravel_extract_data_tables.php.stub';
+        $migration1->up();
+
+        $migration2 = include __DIR__.'/../database/migrations/create_andach_laravel_extract_data_audit_tables.php.stub';
+        $migration2->up();
+
+        $migration3 = include __DIR__.'/../database/migrations/create_andach_laravel_extract_data_correction_tables.php.stub';
+        $migration3->up();
     }
 }

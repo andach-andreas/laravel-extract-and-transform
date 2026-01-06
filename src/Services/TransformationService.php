@@ -109,6 +109,41 @@ class TransformationService
         return $run;
     }
 
+    public function preview(array $config, int $limit = 5): array
+    {
+        $sourceTable = $config['source_table'] ?? null;
+        if (! $sourceTable) {
+            throw new \InvalidArgumentException('Source table is required for preview.');
+        }
+
+        $selects = [];
+        if (isset($config['selects'])) {
+            foreach ($config['selects'] as $alias => $exprConfig) {
+                $selects[$alias] = ExpressionFactory::make($exprConfig);
+            }
+        }
+
+        $query = DB::table($sourceTable);
+
+        $selectSqls = [];
+        foreach ($selects as $alias => $expr) {
+            if (! $expr instanceof Expression) {
+                $expr = Expr::col($expr);
+            }
+            $compiled = $expr->compile($query);
+            $sqlFragment = $this->unwrapRaw($compiled);
+            $selectSqls[] = "$sqlFragment as `$alias`";
+        }
+
+        if (empty($selectSqls)) {
+            $query->select('*');
+        } else {
+            $query->select(DB::raw(implode(', ', $selectSqls)));
+        }
+
+        return $query->limit($limit)->get()->map(fn ($row) => (array) $row)->toArray();
+    }
+
     private function unwrapRaw($value)
     {
         if ($value instanceof \Illuminate\Database\Query\Expression) {

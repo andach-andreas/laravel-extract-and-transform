@@ -1,6 +1,6 @@
 <?php
 
-namespace Andach\ExtractAndTransform\Tests\Feature;
+namespace Andach\ExtractAndTransform\Tests\Feature\Transformation;
 
 use Andach\ExtractAndTransform\Models\Transformation;
 use Andach\ExtractAndTransform\Services\TransformationService;

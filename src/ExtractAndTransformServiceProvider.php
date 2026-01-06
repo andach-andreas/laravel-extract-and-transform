@@ -25,7 +25,9 @@ final class ExtractAndTransformServiceProvider extends PackageServiceProvider
         $package
             ->name('extract-and-transform')
             ->hasConfigFile('extract-data')
-            ->hasMigration('create_andach_laravel_extract_data_tables');
+            ->hasMigration('create_andach_laravel_extract_data_tables')
+            ->hasMigration('create_andach_laravel_extract_data_audit_tables')
+            ->hasMigration('create_andach_laravel_extract_data_correction_tables');
         // ->hasAlias() method removed as it is not supported in this version.
     }
 

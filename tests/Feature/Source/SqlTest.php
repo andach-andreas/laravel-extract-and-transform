@@ -1,6 +1,6 @@
 <?php
 
-namespace Andach\ExtractAndTransform\Tests\Feature;
+namespace Andach\ExtractAndTransform\Tests\Feature\Source;
 
 use Andach\ExtractAndTransform\Facades\ExtractAndTransform;
 use Andach\ExtractAndTransform\Tests\TestCase;
@@ -30,12 +30,11 @@ class SqlTest extends TestCase
     public function test_it_can_sync_from_a_sql_table()
     {
         // We use the 'testing' connection which is already set up in TestCase
-        ExtractAndTransform::createSource('Local SQL', 'sql', [
+        $source = ExtractAndTransform::createSource('Local SQL', 'sql', [
             'connection' => 'testing',
         ]);
 
-        ExtractAndTransform::source('Local SQL')
-            ->sync('source_users')
+        $source->sync('source_users')
             ->withStrategy('full_refresh')
             ->toTable('synced_users')
             ->run();
@@ -50,12 +49,11 @@ class SqlTest extends TestCase
 
     public function test_it_can_sync_with_column_mapping()
     {
-        ExtractAndTransform::createSource('Local SQL', 'sql', [
+        $source = ExtractAndTransform::createSource('Local SQL', 'sql', [
             'connection' => 'testing',
         ]);
 
-        ExtractAndTransform::source('Local SQL')
-            ->sync('source_users')
+        $source->sync('source_users')
             ->withStrategy('full_refresh')
             ->mapColumns([
                 'name' => 'full_name',

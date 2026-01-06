@@ -2,145 +2,98 @@
 
 namespace Andach\ExtractAndTransform\Services;
 
-use Andach\ExtractAndTransform\Connectors\ConnectorRegistry;
-use Andach\ExtractAndTransform\Connectors\Contracts\CanListIdentities;
-use Andach\ExtractAndTransform\Data\RemoteDataset as RemoteDatasetDto;
-use Andach\ExtractAndTransform\Models\ExtractDataset;
-use Andach\ExtractAndTransform\Models\ExtractSchemaVersion;
-use Andach\ExtractAndTransform\Services\Dto\ReconcileOptions;
-use Andach\ExtractAndTransform\Services\Dto\ReconcileResult;
-use Carbon\CarbonImmutable;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-final class ReconcileService
+class ReconcileService
 {
-    public function __construct(
-        private readonly ConnectorRegistry $registry,
-    ) {}
-
-    public function reconcile(ExtractDataset $dataset, ReconcileOptions $opts): ReconcileResult
+    public function reconcile(string $sourceTable, string $destinationTable, string|array $identifier): int
     {
-        $dataset->loadMissing('source');
-
-        if (! $dataset->source) {
-            throw new \RuntimeException('Dataset has no source.');
-        }
-        if (! $dataset->active_schema_version_id) {
-            throw new \RuntimeException("Dataset [{$dataset->slug}] has no active schema version.");
+        // 1. Create Destination Table (Clone)
+        if (Schema::hasTable($destinationTable)) {
+            Schema::drop($destinationTable);
         }
 
-        /** @var ExtractSchemaVersion $sv */
-        $sv = ExtractSchemaVersion::query()->findOrFail($dataset->active_schema_version_id);
+        // SQLite doesn't support CREATE TABLE AS SELECT * FROM ... in one go nicely with indexes,
+        // but for raw data copy it works.
+        // However, Laravel Schema builder is safer for structure, but we want data too.
+        // DB::statement("CREATE TABLE $destinationTable AS SELECT * FROM $sourceTable") works in most DBs.
 
-        $targetConn = $opts->connectionOrDefault();
-        $targetTable = $sv->target_table;
+        DB::statement("CREATE TABLE {$destinationTable} AS SELECT * FROM {$sourceTable}");
 
-        $connector = $this->registry->get($dataset->source->connector);
-        if (! $connector instanceof CanListIdentities) {
-            throw new \RuntimeException("Connector [{$dataset->source->connector}] does not support identity listing.");
-        }
+        // 2. Find columns that have corrections
+        $prefix = config('extract-data.internal_table_prefix', 'andach_leat_');
+        $correctionsTable = $prefix . 'corrections';
 
-        $remoteDataset = new RemoteDatasetDto(
-            identifier: $dataset->identifier,
-            label: $dataset->slug,
-            meta: ['path' => $dataset->identifier]
-        );
+        $columnsToCorrect = DB::table($correctionsTable)
+            ->where('table_name', $sourceTable)
+            ->distinct()
+            ->pluck('column_name');
 
-        $temp = 'extract_seen_'.uniqid();
-        $this->createTempSeenTable($targetConn, $temp);
+        $rowsAffected = 0;
 
-        $scanned = 0;
-
-        try {
-            $buffer = [];
-            $chunk = 1000;
-
-            foreach ($connector->listIdentities($remoteDataset, $dataset->source->config, $opts->identityColumns) as $identity) {
-                $scanned++;
-                $buffer[] = ['identity' => (string) $identity];
-
-                if (count($buffer) >= $chunk) {
-                    DB::connection($targetConn)->table($temp)->insertOrIgnore($buffer);
-                    $buffer = [];
-                }
-            }
-
-            if ($buffer !== []) {
-                DB::connection($targetConn)->table($temp)->insertOrIgnore($buffer);
-            }
-
-            $missing = DB::connection($targetConn)->table('extract_identities as ei')
-                ->leftJoin($temp.' as s', 's.identity', '=', 'ei.identity')
-                ->where('ei.extract_dataset_id', $dataset->id)
-                ->whereNull('ei.deleted_at')
-                ->whereNull('s.identity')
-                ->pluck('ei.identity')
-                ->all();
-
-            $deletedCount = count($missing);
-
-            if (! $opts->dryRun && $deletedCount > 0) {
-                $this->writeTombstones(
-                    targetConn: $targetConn,
-                    targetTable: $targetTable,
-                    datasetId: (int) $dataset->id,
-                    identities: $missing
-                );
-            }
-
-            return new ReconcileResult(
-                identitiesScanned: $scanned,
-                tombstonesWritten: $opts->dryRun ? 0 : $deletedCount
+        // 3. Apply updates per column
+        foreach ($columnsToCorrect as $column) {
+            $rowsAffected += $this->applyCorrectionForColumn(
+                $sourceTable,
+                $destinationTable,
+                $identifier,
+                $column,
+                $correctionsTable
             );
-        } finally {
-            $this->dropTempSeenTable($targetConn, $temp);
-        }
-    }
-
-    private function createTempSeenTable(string $targetConn, string $tempTable): void
-    {
-        $schema = Schema::connection($targetConn);
-        $schema->dropIfExists($tempTable);
-
-        $schema->create($tempTable, function (Blueprint $t) {
-            $t->string('identity')->primary();
-        });
-    }
-
-    private function dropTempSeenTable(string $targetConn, string $tempTable): void
-    {
-        Schema::connection($targetConn)->dropIfExists($tempTable);
-    }
-
-    /**
-     * @param  array<int,string>  $identities
-     */
-    private function writeTombstones(string $targetConn, string $targetTable, int $datasetId, array $identities): void
-    {
-        $now = CarbonImmutable::now()->toDateTimeString();
-
-        $rows = [];
-        foreach ($identities as $id) {
-            $rows[] = [
-                '__identity' => (string) $id,
-                '__op' => 'delete',
-                '__row_hash' => null,
-                '__source_updated_at' => null,
-                '__extracted_at' => $now,
-                '__raw' => json_encode(['deleted' => true], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE),
-            ];
         }
 
-        DB::connection($targetConn)->table($targetTable)->insert($rows);
+        return $rowsAffected;
+    }
 
-        DB::connection($targetConn)->table('extract_identities')
-            ->where('extract_dataset_id', $datasetId)
-            ->whereIn('identity', $identities)
-            ->update([
-                'deleted_at' => $now,
-                'updated_at' => $now,
-            ]);
+    private function applyCorrectionForColumn(string $sourceTable, string $destinationTable, string|array $identifier, string $column, string $correctionsTable): int
+    {
+        $identifierSql = $this->buildIdentifierSql($identifier, $destinationTable);
+
+        // Standard SQL Update with Subquery
+        // UPDATE dest SET col = (SELECT new_value FROM corrections WHERE ...)
+        // WHERE EXISTS (SELECT 1 FROM corrections WHERE ...)
+
+        // We need to handle the case where new_value is text but destination column might be int.
+        // DB should handle implicit cast, or we might need casting.
+        // For now, assume DB handles it.
+
+        $sql = "
+            UPDATE {$destinationTable}
+            SET {$column} = (
+                SELECT new_value
+                FROM {$correctionsTable}
+                WHERE table_name = ?
+                  AND column_name = ?
+                  AND row_identifier = {$identifierSql}
+            )
+            WHERE EXISTS (
+                SELECT 1
+                FROM {$correctionsTable}
+                WHERE table_name = ?
+                  AND column_name = ?
+                  AND row_identifier = {$identifierSql}
+            )
+        ";
+
+        return DB::update($sql, [$sourceTable, $column, $sourceTable, $column]);
+    }
+
+    private function buildIdentifierSql(string|array $identifier, string $tableName): string
+    {
+        if (is_string($identifier)) {
+            return "{$tableName}.{$identifier}";
+        }
+
+        // Composite key
+        $driver = DB::connection()->getDriverName();
+
+        if ($driver === 'sqlite') {
+             $cols = implode(" || '-' || ", array_map(fn($col) => "{$tableName}.{$col}", $identifier));
+             return $cols;
+        }
+
+        $cols = implode(", '-', ", array_map(fn($col) => "{$tableName}.{$col}", $identifier));
+        return "CONCAT({$cols})";
     }
 }

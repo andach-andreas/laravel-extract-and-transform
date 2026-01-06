@@ -49,4 +49,14 @@ class Source
 
         return new Dataset($connector, $this->model->config, $remoteDataset);
     }
+
+    public function listDatasets(): iterable
+    {
+        $connector = App::make(Connectors\ConnectorRegistry::class)->get($this->model->connector);
+        $remoteDatasets = $connector->datasets($this->model->config);
+
+        foreach ($remoteDatasets as $remoteDataset) {
+            yield new Dataset($connector, $this->model->config, $remoteDataset);
+        }
+    }
 }

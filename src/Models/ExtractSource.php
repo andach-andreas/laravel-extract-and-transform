@@ -32,4 +32,12 @@ final class ExtractSource extends Model
     {
         return $this->hasMany(SyncProfile::class);
     }
+
+    public function connect(): \Andach\ExtractAndTransform\Source
+    {
+        return new \Andach\ExtractAndTransform\Source(
+            $this,
+            app(\Andach\ExtractAndTransform\ExtractAndTransform::class)
+        );
+    }
 }

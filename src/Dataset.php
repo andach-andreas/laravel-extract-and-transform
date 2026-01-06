@@ -79,4 +79,19 @@ class Dataset
 
         throw new \Exception('This connector does not support inferring a schema.');
     }
+
+    public function preview(int $limit = 5): array
+    {
+        $rows = [];
+        $count = 0;
+        foreach ($this->getRows() as $row) {
+            $rows[] = $row;
+            $count++;
+            if ($count >= $limit) {
+                break;
+            }
+        }
+
+        return $rows;
+    }
 }

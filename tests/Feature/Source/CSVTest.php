@@ -1,6 +1,6 @@
 <?php
 
-namespace Andach\ExtractAndTransform\Tests\Feature;
+namespace Andach\ExtractAndTransform\Tests\Feature\Source;
 
 use Andach\ExtractAndTransform\Facades\ExtractAndTransform;
 use Andach\ExtractAndTransform\Tests\TestCase;
@@ -24,10 +24,9 @@ class CSVTest extends TestCase
         file_put_contents($path, $content);
 
         try {
-            ExtractAndTransform::createSource('Local CSV', 'csv', ['path' => $path]);
+            $source = ExtractAndTransform::createSource('Local CSV', 'csv', ['path' => $path]);
 
-            ExtractAndTransform::source('Local CSV')
-                ->sync($path)
+            $source->sync($path)
                 ->withStrategy('full_refresh')
                 ->toTable('products_local')
                 ->run();
@@ -52,13 +51,12 @@ class CSVTest extends TestCase
 
         Storage::disk('s3')->put($path, $content);
 
-        ExtractAndTransform::createSource('S3 CSV', 'csv', [
+        $source = ExtractAndTransform::createSource('S3 CSV', 'csv', [
             'disk' => 's3',
             'path' => $path,
         ]);
 
-        ExtractAndTransform::source('S3 CSV')
-            ->sync($path)
+        $source->sync($path)
             ->withStrategy('full_refresh')
             ->toTable('products_s3')
             ->run();
@@ -76,7 +74,7 @@ class CSVTest extends TestCase
         Storage::fake('sftp');
         $path = 'missing.csv';
 
-        ExtractAndTransform::createSource('Missing CSV', 'csv', [
+        $source = ExtractAndTransform::createSource('Missing CSV', 'csv', [
             'disk' => 'sftp',
             'path' => $path,
         ]);
@@ -86,8 +84,7 @@ class CSVTest extends TestCase
         // but our code throws "Failed to open stream..." in streamRows
         $this->expectExceptionMessage('Failed to open stream for CSV file on disk [sftp]: missing.csv');
 
-        ExtractAndTransform::source('Missing CSV')
-            ->sync($path)
+        $source->sync($path)
             ->withStrategy('full_refresh')
             ->toTable('products_missing')
             ->run();
