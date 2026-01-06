@@ -9,7 +9,6 @@
  */
 
 use Andach\ExtractAndTransform\ExtractAndTransform;
-use Andach\ExtractAndTransform\Models\ExtractSource;
 use Andach\ExtractAndTransform\Models\SyncProfile;
 use Illuminate\Support\Facades\File;
 
