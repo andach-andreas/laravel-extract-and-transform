@@ -12,6 +12,7 @@ return new class extends Migration {
         Schema::create($prefix . 'audit_runs', function (Blueprint $table) {
             $table->id();
             $table->string('table_name');
+            $table->json('identifier_column'); // Stores the column(s) used as ID
             $table->string('status');
             $table->timestamp('started_at')->nullable();
             $table->timestamp('finished_at')->nullable();

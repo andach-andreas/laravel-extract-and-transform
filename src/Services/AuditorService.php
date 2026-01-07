@@ -19,6 +19,7 @@ class AuditorService
     {
         $run = AuditRun::create([
             'table_name' => $tableName,
+            'identifier_column' => $identifier,
             'status' => 'running',
             'started_at' => now(),
         ]);

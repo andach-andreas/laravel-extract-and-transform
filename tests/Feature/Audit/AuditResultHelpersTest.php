@@ -35,8 +35,8 @@ class AuditResultHelpersTest extends TestCase
         $run = ExtractAndTransform::audit('helper_source')
             ->identifiedBy('id')
             ->check([
-                'name' => fn($r) => $r->required(),
-                'email' => fn($r) => $r->required(),
+                'name' => fn ($r) => $r->required(),
+                'email' => fn ($r) => $r->required(),
             ])
             ->run();
 
@@ -56,10 +56,10 @@ class AuditResultHelpersTest extends TestCase
     {
         $run = ExtractAndTransform::audit('helper_source')
             ->identifiedBy('id')
-            ->check(['name' => fn($r) => $r->required()])
+            ->check(['name' => fn ($r) => $r->required()])
             ->run();
 
-        $failedRows = $run->getFailedRows('id');
+        $failedRows = $run->getFailedRows();
 
         $this->assertCount(2, $failedRows); // Rows 2 and 4
         $this->assertEquals(2, $failedRows->firstWhere('id', 2)->id);
@@ -81,7 +81,7 @@ class AuditResultHelpersTest extends TestCase
 
         $run = ExtractAndTransform::audit('comp_helper_source')
             ->identifiedBy(['a', 'b'])
-            ->check(['val' => fn($r) => $r->required()])
+            ->check(['val' => fn ($r) => $r->required()])
             ->run();
 
         $failedRows = $run->getFailedRows(['a', 'b']);
@@ -95,7 +95,7 @@ class AuditResultHelpersTest extends TestCase
     {
         $run = ExtractAndTransform::audit('helper_source')
             ->identifiedBy('id')
-            ->check(['name' => fn($r) => $r->required()])
+            ->check(['name' => fn ($r) => $r->required()])
             ->run();
 
         $log = $run->logs->firstWhere('row_identifier', '2');
@@ -115,7 +115,7 @@ class AuditResultHelpersTest extends TestCase
     {
         $run = ExtractAndTransform::audit('helper_source')
             ->identifiedBy('id')
-            ->check(['name' => fn($r) => $r->required()])
+            ->check(['name' => fn ($r) => $r->required()])
             ->run();
 
         $log = $run->logs->firstWhere('row_identifier', '2');

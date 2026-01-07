@@ -4,6 +4,7 @@ namespace Andach\ExtractAndTransform\Transform\Traits;
 
 use Andach\ExtractAndTransform\Transform\Expression;
 use Andach\ExtractAndTransform\Transform\Expressions\MathExpression;
+use Andach\ExtractAndTransform\Transform\Expressions\NumericFunctionExpression;
 
 trait HasNumericFunctions
 {
@@ -25,5 +26,10 @@ trait HasNumericFunctions
     public function divide(float|int|Expression $value): MathExpression
     {
         return new MathExpression($this, '/', $value);
+    }
+
+    public function round(int $precision = 0): NumericFunctionExpression
+    {
+        return new NumericFunctionExpression('ROUND', $this, [$precision]);
     }
 }

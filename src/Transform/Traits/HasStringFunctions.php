@@ -25,4 +25,9 @@ trait HasStringFunctions
     {
         return new StringFunctionExpression('REPLACE', $this, [$search, $replace]);
     }
+
+    public function split(string $delimiter, int $index): StringFunctionExpression
+    {
+        return new StringFunctionExpression('SPLIT_PART', $this, [$delimiter, $index]);
+    }
 }

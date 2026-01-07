@@ -64,4 +64,25 @@ final class ExtractAndTransformServiceProvider extends PackageServiceProvider
             }
         );
     }
+
+    public function packageBooted(): void
+    {
+        try {
+            $connection = $this->app['db']->connection();
+            if ($connection->getDriverName() === 'sqlite') {
+                $connection->getPdo()->sqliteCreateFunction('SPLIT_PART', function ($string, $delimiter, $position) {
+                    if ($string === null) {
+                        return null;
+                    }
+                    $parts = explode($delimiter, $string);
+                    // Position is 1-based
+                    $index = $position - 1;
+
+                    return $parts[$index] ?? null;
+                }, 3);
+            }
+        } catch (\Throwable $e) {
+            // DB might not be configured or ready, ignore.
+        }
+    }
 }

@@ -11,6 +11,10 @@ class AuditRun extends Model
 {
     protected $guarded = [];
 
+    protected $casts = [
+        'identifier_column' => 'array',
+    ];
+
     public function __construct(array $attributes = [])
     {
         parent::__construct($attributes);
@@ -32,7 +36,7 @@ class AuditRun extends Model
         return $this->logs->groupBy('column_name');
     }
 
-    public function getFailedRows(string|array $identifierColumn): Collection
+    public function getFailedRows(): Collection
     {
         $failedIds = $this->logs()->distinct()->pluck('row_identifier')->toArray();
 
@@ -41,17 +45,24 @@ class AuditRun extends Model
         }
 
         $query = DB::table($this->table_name);
+        $identifierColumn = $this->identifier_column;
 
-        if (is_string($identifierColumn)) {
-            $query->whereIn($identifierColumn, $failedIds);
+        // If it was stored as a single string in JSON (e.g. "id"), cast handles it?
+        // If I save it as `['id']` or `"id"`, array cast might behave differently.
+        // I'll ensure AuditorService saves it as an array or I handle both here.
+        // Ideally, AuditorService should normalize it to array before saving.
+
+        $cols = is_array($identifierColumn) ? $identifierColumn : [$identifierColumn];
+
+        if (count($cols) === 1) {
+            $query->whereIn($cols[0], $failedIds);
         } else {
             // Composite key handling
-            // We reconstruct the CONCAT logic to match against the stored identifiers
             $driver = DB::connection()->getDriverName();
             if ($driver === 'sqlite') {
-                $concatSql = implode(" || '-' || ", array_map(fn($col) => "`{$col}`", $identifierColumn));
+                $concatSql = implode(" || '-' || ", array_map(fn ($col) => "`{$col}`", $cols));
             } else {
-                $concatSql = "CONCAT(" . implode(", '-', ", array_map(fn($col) => "`{$col}`", $identifierColumn)) . ")";
+                $concatSql = 'CONCAT('.implode(", '-', ", array_map(fn ($col) => "`{$col}`", $cols)).')';
             }
 
             $query->whereIn(DB::raw($concatSql), $failedIds);

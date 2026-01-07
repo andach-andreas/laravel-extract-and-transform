@@ -2,6 +2,7 @@
 
 namespace Andach\ExtractAndTransform\Transform;
 
+use Andach\ExtractAndTransform\Transform\Expressions\CaseExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\ColumnExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\ConcatExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\LookupExpression;
@@ -27,5 +28,13 @@ class Expr
     public static function lookup(string $targetTable, string $localKey, string $foreignKey, string $targetColumn): LookupExpression
     {
         return new LookupExpression($targetTable, $localKey, $foreignKey, $targetColumn);
+    }
+
+    public static function when(string|Expression $column, string $operator, mixed $value): CaseExpression
+    {
+        if (is_string($column)) {
+            $column = self::col($column);
+        }
+        return new CaseExpression($column, $operator, $value);
     }
 }
