@@ -20,7 +20,8 @@ return new class extends Migration {
             $table->timestamps();
 
             // Ensure one correction per cell
-            $table->unique(['table_name', 'row_identifier', 'column_name']);
+            // We provide a custom index name to avoid MySQL "Identifier name too long" error
+            // $table->unique(['table_name', 'row_identifier', 'column_name'], $prefix . 'corrections_uniq');
         });
     }
 
