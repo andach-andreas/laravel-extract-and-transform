@@ -36,7 +36,7 @@ class StringFunctionExpression implements Expression
 
                 $countExpr = "(CHAR_LENGTH({$columnSql}) - CHAR_LENGTH(REPLACE({$columnSql}, {$delimiter}, ''))) / CHAR_LENGTH({$delimiter})";
 
-                $extractExpr = "";
+                $extractExpr = '';
                 $count = $index + 1;
                 if ($index === 0) {
                     $extractExpr = "SUBSTRING_INDEX({$columnSql}, {$delimiter}, 1)";
@@ -51,12 +51,14 @@ class StringFunctionExpression implements Expression
                 // Postgres SPLIT_PART returns empty string if out of bounds.
                 // We wrap it in NULLIF to return NULL instead.
                 $pgIndex = $index + 1;
+
                 return DB::raw("NULLIF(SPLIT_PART({$columnSql}, {$delimiter}, {$pgIndex}), '')");
             }
 
             if ($driver === 'sqlite') {
                 // SQLite polyfill (registered in ServiceProvider) returns NULL if out of bounds.
                 $pgIndex = $index + 1;
+
                 return DB::raw("SPLIT_PART({$columnSql}, {$delimiter}, {$pgIndex})");
             }
         }

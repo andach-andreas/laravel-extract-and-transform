@@ -35,6 +35,7 @@ class Expr
         if (is_string($column)) {
             $column = self::col($column);
         }
+
         return new CaseExpression($column, $operator, $value);
     }
 }
