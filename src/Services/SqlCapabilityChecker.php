@@ -30,8 +30,7 @@ class SqlCapabilityChecker
             'not_equal_to_column',
             'exists_in',
             'starts_with',
-            'ends_with'
-             => true,
+            'ends_with' => true,
 
             // Regex is only supported by default in MySQL/Postgres
             'regex' => in_array($this->driver, ['mysql', 'pgsql']),

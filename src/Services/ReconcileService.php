@@ -23,7 +23,7 @@ class ReconcileService
 
         // 2. Find columns that have corrections
         $prefix = config('extract-data.internal_table_prefix', 'andach_leat_');
-        $correctionsTable = $prefix . 'corrections';
+        $correctionsTable = $prefix.'corrections';
 
         $columnsToCorrect = DB::table($correctionsTable)
             ->where('table_name', $sourceTable)
@@ -89,11 +89,13 @@ class ReconcileService
         $driver = DB::connection()->getDriverName();
 
         if ($driver === 'sqlite') {
-             $cols = implode(" || '-' || ", array_map(fn($col) => "{$tableName}.{$col}", $identifier));
-             return $cols;
+            $cols = implode(" || '-' || ", array_map(fn ($col) => "{$tableName}.{$col}", $identifier));
+
+            return $cols;
         }
 
-        $cols = implode(", '-', ", array_map(fn($col) => "{$tableName}.{$col}", $identifier));
+        $cols = implode(", '-', ", array_map(fn ($col) => "{$tableName}.{$col}", $identifier));
+
         return "CONCAT({$cols})";
     }
 }

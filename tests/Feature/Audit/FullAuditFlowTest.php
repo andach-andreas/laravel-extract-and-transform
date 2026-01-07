@@ -31,8 +31,8 @@ class FullAuditFlowTest extends TestCase
         $run = ExtractAndTransform::audit('audit_flow_int')
             ->identifiedBy('id')
             ->check([
-                'name' => fn($r) => $r->required(),
-                'email' => fn($r) => $r->required(),
+                'name' => fn ($r) => $r->required(),
+                'email' => fn ($r) => $r->required(),
             ])
             ->run();
 
@@ -72,7 +72,7 @@ class FullAuditFlowTest extends TestCase
         $run = ExtractAndTransform::audit('audit_flow_str')
             ->identifiedBy('sku')
             ->check([
-                'desc' => fn($r) => $r->required(),
+                'desc' => fn ($r) => $r->required(),
             ])
             ->run();
 
@@ -107,7 +107,7 @@ class FullAuditFlowTest extends TestCase
         $run = ExtractAndTransform::audit('audit_flow_comp')
             ->identifiedBy(['cat', 'code'])
             ->check([
-                'val' => fn($r) => $r->required(),
+                'val' => fn ($r) => $r->required(),
             ])
             ->run();
 

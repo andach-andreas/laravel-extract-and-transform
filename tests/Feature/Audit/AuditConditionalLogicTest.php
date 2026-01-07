@@ -36,7 +36,7 @@ class AuditConditionalLogicTest extends TestCase
         $run = ExtractAndTransform::audit('conditional_source')
             ->identifiedBy('id')
             ->check([
-                'postcode' => fn($rule) => $rule->when('country_code', '=', 'US', function ($subRule) {
+                'postcode' => fn ($rule) => $rule->when('country_code', '=', 'US', function ($subRule) {
                     $subRule->regex('/^\d{5}(-\d{4})?$/');
                 }),
             ])

@@ -37,8 +37,8 @@ class AuditorTest extends TestCase
         $run = ExtractAndTransform::audit('audit_source')
             ->identifiedBy('id')
             ->check([
-                'name' => fn($rule) => $rule->required(),
-                'code' => fn($rule) => $rule->required(),
+                'name' => fn ($rule) => $rule->required(),
+                'code' => fn ($rule) => $rule->required(),
             ])
             ->run();
 
@@ -56,7 +56,7 @@ class AuditorTest extends TestCase
         $run = ExtractAndTransform::audit('audit_source')
             ->identifiedBy('id')
             ->check([
-                'status' => fn($rule) => $rule->in(['active', 'inactive']),
+                'status' => fn ($rule) => $rule->in(['active', 'inactive']),
             ])
             ->run();
 
@@ -75,7 +75,7 @@ class AuditorTest extends TestCase
         $run = ExtractAndTransform::audit('audit_source')
             ->identifiedBy('id')
             ->check([
-                'status' => fn($rule) => $rule->notIn(['invalid', 'pending']),
+                'status' => fn ($rule) => $rule->notIn(['invalid', 'pending']),
             ])
             ->run();
 
@@ -92,7 +92,7 @@ class AuditorTest extends TestCase
         $run = ExtractAndTransform::audit('audit_source')
             ->identifiedBy('id')
             ->check([
-                'description' => fn($rule) => $rule->minLength(10),
+                'description' => fn ($rule) => $rule->minLength(10),
             ])
             ->run();
 
@@ -111,7 +111,7 @@ class AuditorTest extends TestCase
         $run = ExtractAndTransform::audit('audit_source')
             ->identifiedBy('id')
             ->check([
-                'description' => fn($rule) => $rule->maxLength(10),
+                'description' => fn ($rule) => $rule->maxLength(10),
             ])
             ->run();
 
@@ -130,7 +130,7 @@ class AuditorTest extends TestCase
         $run = ExtractAndTransform::audit('audit_source')
             ->identifiedBy('id')
             ->check([
-                'age' => fn($rule) => $rule->greaterThan(18),
+                'age' => fn ($rule) => $rule->greaterThan(18),
             ])
             ->run();
 
@@ -149,7 +149,7 @@ class AuditorTest extends TestCase
         $run = ExtractAndTransform::audit('audit_source')
             ->identifiedBy('id')
             ->check([
-                'age' => fn($rule) => $rule->lessThan(99),
+                'age' => fn ($rule) => $rule->lessThan(99),
             ])
             ->run();
 
@@ -169,7 +169,7 @@ class AuditorTest extends TestCase
         $run = ExtractAndTransform::audit('audit_source')
             ->identifiedBy('id')
             ->check([
-                'code' => fn($rule) => $rule->regex('/^[A-Z][0-9]$/'),
+                'code' => fn ($rule) => $rule->regex('/^[A-Z][0-9]$/'),
             ])
             ->run();
 
@@ -188,7 +188,7 @@ class AuditorTest extends TestCase
         $run = ExtractAndTransform::audit('audit_source')
             ->identifiedBy('id')
             ->check([
-                'name' => fn($rule) => $rule->custom(fn($val) => $val !== 'Bad Code'),
+                'name' => fn ($rule) => $rule->custom(fn ($val) => $val !== 'Bad Code'),
             ])
             ->run();
 

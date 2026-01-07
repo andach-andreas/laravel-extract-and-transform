@@ -9,14 +9,14 @@ class CorrectionTest extends TestCase
 {
     public function test_it_uses_correct_table_name()
     {
-        $correction = new Correction();
+        $correction = new Correction;
         $prefix = config('extract-data.internal_table_prefix', 'andach_leat_');
-        $this->assertEquals($prefix . 'corrections', $correction->getTable());
+        $this->assertEquals($prefix.'corrections', $correction->getTable());
     }
 
     public function test_it_is_guarded()
     {
-        $correction = new Correction();
+        $correction = new Correction;
         // Since we use $guarded = [], we can't easily test it via isFillable without knowing attributes.
         // But we can test that we can fill attributes.
         $correction->fill(['table_name' => 'test']);

@@ -43,7 +43,7 @@ class AuditForeignKeyExistsTest extends TestCase
         $run = ExtractAndTransform::audit('orders')
             ->identifiedBy('id')
             ->check([
-                'user_id' => fn($rule) => $rule->existsIn('users', 'id'),
+                'user_id' => fn ($rule) => $rule->existsIn('users', 'id'),
             ])
             ->run();
 

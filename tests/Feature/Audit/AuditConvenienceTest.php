@@ -27,7 +27,7 @@ class AuditConvenienceTest extends TestCase
 
         $run = ExtractAndTransform::audit('convenience_source')
             ->identifiedBy('id')
-            ->check(['val' => fn($r) => $r->{$rule}(...$args)])
+            ->check(['val' => fn ($r) => $r->{$rule}(...$args)])
             ->run();
 
         $this->assertEquals(1, $run->total_violations, "Rule '{$rule}' failed to find 1 violation.");
@@ -63,13 +63,13 @@ class AuditConvenienceTest extends TestCase
 
         // startsWith (SQL)
         DB::table('convenience_source')->insert([['val' => 'START-ok'], ['val' => 'bad-START']]);
-        $run = ExtractAndTransform::audit('convenience_source')->identifiedBy('id')->check(['val' => fn($r) => $r->startsWith('START')])->run();
+        $run = ExtractAndTransform::audit('convenience_source')->identifiedBy('id')->check(['val' => fn ($r) => $r->startsWith('START')])->run();
         $this->assertEquals(1, $run->total_violations);
         DB::table('convenience_source')->truncate();
 
         // endsWith (SQL)
         DB::table('convenience_source')->insert([['val' => 'ok-END'], ['val' => 'END-bad']]);
-        $run = ExtractAndTransform::audit('convenience_source')->identifiedBy('id')->check(['val' => fn($r) => $r->endsWith('END')])->run();
+        $run = ExtractAndTransform::audit('convenience_source')->identifiedBy('id')->check(['val' => fn ($r) => $r->endsWith('END')])->run();
         $this->assertEquals(1, $run->total_violations);
         DB::table('convenience_source')->truncate();
     }

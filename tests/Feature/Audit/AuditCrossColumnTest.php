@@ -37,7 +37,7 @@ class AuditCrossColumnTest extends TestCase
         $run = ExtractAndTransform::audit('cross_column_source')
             ->identifiedBy('id')
             ->check([
-                'price' => fn($r) => $r->greaterThanColumn('cost_price'),
+                'price' => fn ($r) => $r->greaterThanColumn('cost_price'),
             ])
             ->run();
 
@@ -55,7 +55,7 @@ class AuditCrossColumnTest extends TestCase
         $run = ExtractAndTransform::audit('cross_column_source')
             ->identifiedBy('id')
             ->check([
-                'ordered_at' => fn($r) => $r->lessThanColumn('shipped_at'),
+                'ordered_at' => fn ($r) => $r->lessThanColumn('shipped_at'),
             ])
             ->run();
 
@@ -73,7 +73,7 @@ class AuditCrossColumnTest extends TestCase
         $run = ExtractAndTransform::audit('cross_column_source')
             ->identifiedBy('id')
             ->check([
-                'password' => fn($r) => $r->equalToColumn('password_confirmation'),
+                'password' => fn ($r) => $r->equalToColumn('password_confirmation'),
             ])
             ->run();
 
@@ -91,7 +91,7 @@ class AuditCrossColumnTest extends TestCase
         $run = ExtractAndTransform::audit('cross_column_source')
             ->identifiedBy('id')
             ->check([
-                'price' => fn($r) => $r->notEqualToColumn('cost_price'),
+                'price' => fn ($r) => $r->notEqualToColumn('cost_price'),
             ])
             ->run();
 

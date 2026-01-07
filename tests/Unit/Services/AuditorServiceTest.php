@@ -62,7 +62,7 @@ class AuditorServiceTest extends TestCase
         ]);
 
         $run = $this->service->run('composite_source', ['part1', 'part2'], [
-            'val' => fn($r) => $r->required(),
+            'val' => fn ($r) => $r->required(),
         ]);
 
         $this->assertEquals(1, $run->total_violations);

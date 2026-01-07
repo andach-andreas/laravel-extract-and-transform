@@ -14,7 +14,7 @@ class AuditBuilderTest extends TestCase
     {
         $builder = new AuditBuilder('test_table');
         $builder->identifiedBy('id');
-        $builder->check(['col' => fn($r) => $r->required()]);
+        $builder->check(['col' => fn ($r) => $r->required()]);
 
         // Use reflection to check private properties since there are no getters
         $reflection = new \ReflectionClass($builder);
@@ -47,7 +47,7 @@ class AuditBuilderTest extends TestCase
         $mockService->shouldReceive('run')
             ->once()
             ->with('test_table', 'id', ['col' => []])
-            ->andReturn(new AuditRun());
+            ->andReturn(new AuditRun);
 
         $this->app->instance(AuditorService::class, $mockService);
 

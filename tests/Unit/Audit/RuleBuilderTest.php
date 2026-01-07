@@ -9,7 +9,7 @@ class RuleBuilderTest extends TestCase
 {
     public function test_it_builds_required_rule()
     {
-        $builder = new RuleBuilder();
+        $builder = new RuleBuilder;
         $builder->required();
 
         $constraints = $builder->getConstraints();
@@ -19,7 +19,7 @@ class RuleBuilderTest extends TestCase
 
     public function test_it_builds_regex_rule()
     {
-        $builder = new RuleBuilder();
+        $builder = new RuleBuilder;
         $builder->regex('/^[A-Z]+$/');
 
         $constraints = $builder->getConstraints();
@@ -29,7 +29,7 @@ class RuleBuilderTest extends TestCase
 
     public function test_it_builds_multiple_rules()
     {
-        $builder = new RuleBuilder();
+        $builder = new RuleBuilder;
         $builder->required()->numeric()->integer();
 
         $constraints = $builder->getConstraints();
@@ -41,7 +41,7 @@ class RuleBuilderTest extends TestCase
 
     public function test_it_builds_in_rule()
     {
-        $builder = new RuleBuilder();
+        $builder = new RuleBuilder;
         $builder->in(['A', 'B']);
 
         $constraints = $builder->getConstraints();
@@ -51,8 +51,8 @@ class RuleBuilderTest extends TestCase
 
     public function test_it_builds_custom_rule()
     {
-        $callback = fn($val) => true;
-        $builder = new RuleBuilder();
+        $callback = fn ($val) => true;
+        $builder = new RuleBuilder;
         $builder->custom($callback);
 
         $constraints = $builder->getConstraints();
