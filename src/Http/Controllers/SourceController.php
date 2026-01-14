@@ -13,6 +13,7 @@ class SourceController extends Controller
     {
         $args = [];
         $args['sources'] = ExtractSource::all();
+
         return view(config('extract-data.views.sources.index', 'extract-data::sources.index'), $args);
     }
 
@@ -39,7 +40,8 @@ class SourceController extends Controller
         ExtractAndTransform::createSource($data['name'], $data['connector'], $data['config'] ?? []);
 
         $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
-        return redirect()->route($routePrefix . 'sources.index')
+
+        return redirect()->route($routePrefix.'sources.index')
             ->with('success', 'Source created successfully.');
     }
 
@@ -61,7 +63,7 @@ class SourceController extends Controller
         $source = ExtractSource::findOrFail($id);
 
         $data = $request->validate([
-            'name' => 'required|string|max:255|unique:andach_leat_extract_sources,name,' . $source->id,
+            'name' => 'required|string|max:255|unique:andach_leat_extract_sources,name,'.$source->id,
             'connector' => 'required|string',
             'config' => 'array',
         ]);
@@ -73,7 +75,8 @@ class SourceController extends Controller
         ]);
 
         $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
-        return redirect()->route($routePrefix . 'sources.index')
+
+        return redirect()->route($routePrefix.'sources.index')
             ->with('success', 'Source updated successfully.');
     }
 
@@ -83,7 +86,8 @@ class SourceController extends Controller
         $source->delete();
 
         $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
-        return redirect()->route($routePrefix . 'sources.index')
+
+        return redirect()->route($routePrefix.'sources.index')
             ->with('success', 'Source deleted successfully.');
     }
 }

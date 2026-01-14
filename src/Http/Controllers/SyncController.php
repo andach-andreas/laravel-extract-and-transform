@@ -23,7 +23,7 @@ class SyncController extends Controller
         try {
             $args['datasets'] = iterator_to_array($sourceWrapper->listDatasets());
         } catch (\Exception $e) {
-            return back()->with('error', 'Failed to list datasets: ' . $e->getMessage());
+            return back()->with('error', 'Failed to list datasets: '.$e->getMessage());
         }
 
         $args['profiles'] = $args['sourceModel']->syncProfiles->keyBy('dataset_identifier');
@@ -40,18 +40,18 @@ class SyncController extends Controller
 
         $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
 
-        if (!$args['datasetIdentifier']) {
-            return redirect()->route($routePrefix . 'syncs.index', $sourceId)->with('error', 'Dataset identifier required.');
+        if (! $args['datasetIdentifier']) {
+            return redirect()->route($routePrefix.'syncs.index', $sourceId)->with('error', 'Dataset identifier required.');
         }
 
         try {
             $dataset = $sourceWrapper->getDataset($args['datasetIdentifier']);
-            if (!$dataset) {
-                throw new \Exception("Dataset not found.");
+            if (! $dataset) {
+                throw new \Exception('Dataset not found.');
             }
             $args['schema'] = $dataset->getSchema();
         } catch (\Exception $e) {
-            return redirect()->route($routePrefix . 'syncs.index', $sourceId)->with('error', 'Failed to fetch schema: ' . $e->getMessage());
+            return redirect()->route($routePrefix.'syncs.index', $sourceId)->with('error', 'Failed to fetch schema: '.$e->getMessage());
         }
 
         $args['profile'] = $args['sourceModel']->syncProfiles()->firstOrNew(['dataset_identifier' => $args['datasetIdentifier']]);
@@ -97,10 +97,11 @@ class SyncController extends Controller
             $sync->run();
 
             $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
-            return redirect()->route($routePrefix . 'syncs.index', $sourceId)
+
+            return redirect()->route($routePrefix.'syncs.index', $sourceId)
                 ->with('success', "Sync for '$datasetIdentifier' configured and run successfully.");
         } catch (\Exception $e) {
-            return back()->with('error', "Sync failed: " . $e->getMessage())->withInput();
+            return back()->with('error', 'Sync failed: '.$e->getMessage())->withInput();
         }
     }
 }

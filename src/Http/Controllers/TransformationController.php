@@ -13,6 +13,7 @@ class TransformationController extends Controller
     {
         try {
             $tables = DB::getSchemaBuilder()->getTables();
+
             return collect($tables)->map(function ($table) {
                 if (is_object($table)) {
                     return $table->name;
@@ -20,6 +21,7 @@ class TransformationController extends Controller
                 if (is_array($table)) {
                     return $table['name'] ?? reset($table);
                 }
+
                 return $table;
             })->values()->all();
         } catch (\Exception $e) {
@@ -31,6 +33,7 @@ class TransformationController extends Controller
     {
         $args = [];
         $args['transformations'] = Transformation::with('runs')->get();
+
         return view(config('extract-data.views.transformations.index', 'extract-data::transformations.index'), $args);
     }
 
@@ -38,6 +41,7 @@ class TransformationController extends Controller
     {
         $args = [];
         $args['tables'] = $this->getTables();
+
         return view(config('extract-data.views.transformations.create', 'extract-data::transformations.create'), $args);
     }
 
@@ -58,7 +62,8 @@ class TransformationController extends Controller
         ]);
 
         $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
-        return redirect()->route($routePrefix . 'transformations.index')
+
+        return redirect()->route($routePrefix.'transformations.index')
             ->with('success', 'Transformation created successfully.');
     }
 
@@ -67,13 +72,14 @@ class TransformationController extends Controller
         $args = [];
         $args['transformation'] = $transformation;
         $args['tables'] = $this->getTables();
+
         return view(config('extract-data.views.transformations.edit', 'extract-data::transformations.edit'), $args);
     }
 
     public function update(Request $request, Transformation $transformation)
     {
         $data = $request->validate([
-            'name' => 'required|string|max:255|unique:andach_leat_transformations,name,' . $transformation->id,
+            'name' => 'required|string|max:255|unique:andach_leat_transformations,name,'.$transformation->id,
             'configuration' => 'required|json',
         ]);
 
@@ -87,7 +93,8 @@ class TransformationController extends Controller
         ]);
 
         $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
-        return redirect()->route($routePrefix . 'transformations.index')
+
+        return redirect()->route($routePrefix.'transformations.index')
             ->with('success', 'Transformation updated successfully.');
     }
 
@@ -95,7 +102,8 @@ class TransformationController extends Controller
     {
         $transformation->delete();
         $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
-        return redirect()->route($routePrefix . 'transformations.index')
+
+        return redirect()->route($routePrefix.'transformations.index')
             ->with('success', 'Transformation deleted successfully.');
     }
 
@@ -103,9 +111,10 @@ class TransformationController extends Controller
     {
         try {
             $transformation->run();
+
             return back()->with('success', 'Transformation run successfully.');
         } catch (\Exception $e) {
-            return back()->with('error', 'Transformation failed: ' . $e->getMessage());
+            return back()->with('error', 'Transformation failed: '.$e->getMessage());
         }
     }
 }
