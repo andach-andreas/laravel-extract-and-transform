@@ -40,23 +40,37 @@ class Source
     public function getDataset(string $identifier): ?Dataset
     {
         $connector = App::make(Connectors\ConnectorRegistry::class)->get($this->model->connector);
-        $remoteDataset = collect($connector->datasets($this->model->config))
+
+        $config = $this->model->config;
+        $updater = function (array $newConfig) {
+            $this->model->update(['config' => $newConfig]);
+        };
+        $config['__updater'] = $updater;
+
+        $remoteDataset = collect($connector->datasets($config))
             ->first(fn ($d) => $d->identifier === $identifier);
 
         if (! $remoteDataset) {
             return null;
         }
 
-        return new Dataset($connector, $this->model->config, $remoteDataset);
+        return new Dataset($connector, $this->model->config, $remoteDataset, $updater);
     }
 
     public function listDatasets(): iterable
     {
         $connector = App::make(Connectors\ConnectorRegistry::class)->get($this->model->connector);
-        $remoteDatasets = $connector->datasets($this->model->config);
+
+        $config = $this->model->config;
+        $updater = function (array $newConfig) {
+            $this->model->update(['config' => $newConfig]);
+        };
+        $config['__updater'] = $updater;
+
+        $remoteDatasets = $connector->datasets($config);
 
         foreach ($remoteDatasets as $remoteDataset) {
-            yield new Dataset($connector, $this->model->config, $remoteDataset);
+            yield new Dataset($connector, $this->model->config, $remoteDataset, $updater);
         }
     }
 }

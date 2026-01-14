@@ -12,11 +12,17 @@ use Andach\ExtractAndTransform\Data\RemoteSchema;
 
 class Dataset
 {
+    /** @var callable|null */
+    private $configUpdater;
+
     public function __construct(
         private readonly Connector $connector,
         private readonly array $config,
-        private readonly RemoteDataset $remoteDataset
-    ) {}
+        private readonly RemoteDataset $remoteDataset,
+        ?callable $configUpdater = null
+    ) {
+        $this->configUpdater = $configUpdater;
+    }
 
     public function getIdentifier(): string
     {
@@ -35,8 +41,13 @@ class Dataset
 
     public function getRows(): iterable
     {
+        $config = $this->config;
+        if ($this->configUpdater) {
+            $config['__updater'] = $this->configUpdater;
+        }
+
         if ($this->connector instanceof CanStreamRows) {
-            return $this->connector->streamRows($this->remoteDataset, $this->config);
+            return $this->connector->streamRows($this->remoteDataset, $config);
         }
 
         throw new \Exception('This connector does not support streaming rows.');
@@ -44,8 +55,13 @@ class Dataset
 
     public function getRowsWithCheckpoint(?array $checkpoint, array $options = []): \Generator
     {
+        $config = $this->config;
+        if ($this->configUpdater) {
+            $config['__updater'] = $this->configUpdater;
+        }
+
         if ($this->connector instanceof CanStreamRowsWithCheckpoint) {
-            return $this->connector->streamRowsWithCheckpoint($this->remoteDataset, $this->config, $checkpoint, $options);
+            return $this->connector->streamRowsWithCheckpoint($this->remoteDataset, $config, $checkpoint, $options);
         }
 
         throw new \Exception('This connector does not support streaming rows with checkpoint.');
@@ -53,8 +69,13 @@ class Dataset
 
     public function getIdentities(array $identityColumns): iterable
     {
+        $config = $this->config;
+        if ($this->configUpdater) {
+            $config['__updater'] = $this->configUpdater;
+        }
+
         if ($this->connector instanceof CanListIdentities) {
-            return $this->connector->listIdentities($this->remoteDataset, $this->config, $identityColumns);
+            return $this->connector->listIdentities($this->remoteDataset, $config, $identityColumns);
         }
 
         throw new \Exception('This connector does not support listing identities.');
@@ -73,8 +94,13 @@ class Dataset
 
     public function getSchema(): RemoteSchema
     {
+        $config = $this->config;
+        if ($this->configUpdater) {
+            $config['__updater'] = $this->configUpdater;
+        }
+
         if ($this->connector instanceof CanInferSchema) {
-            return $this->connector->inferSchema($this->remoteDataset, $this->config);
+            return $this->connector->inferSchema($this->remoteDataset, $config);
         }
 
         throw new \Exception('This connector does not support inferring a schema.');

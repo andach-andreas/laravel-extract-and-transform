@@ -79,7 +79,12 @@ final class SyncService
                 $e = new Exception($msg, 0, $e);
             }
 
-            $run->update(['status' => 'failed', 'finished_at' => now(), 'log_message' => $e->getMessage()]);
+            $message = $e->getMessage();
+            if (strlen($message) > 60000) {
+                $message = substr($message, 0, 60000).'... [Truncated]';
+            }
+
+            $run->update(['status' => 'failed', 'finished_at' => now(), 'log_message' => $message]);
             event(new SyncFailed($run, $profile));
             throw $e;
         }

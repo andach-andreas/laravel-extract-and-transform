@@ -1,6 +1,6 @@
 <?php
 
-namespace Andach\ExtractAndTransform\Connectors\Sql;
+namespace Andach\ExtractAndTransform\Connectors\General\Sql;
 
 use Andach\ExtractAndTransform\Connectors\BaseConnector;
 use Andach\ExtractAndTransform\Connectors\ConnectorConfigDefinition;
@@ -11,7 +11,7 @@ use Andach\ExtractAndTransform\Services\RetryService;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 
-final class SqlConnector extends BaseConnector
+class SqlConnector extends BaseConnector
 {
     private RetryService $retryService;
 

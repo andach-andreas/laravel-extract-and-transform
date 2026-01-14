@@ -71,6 +71,11 @@ final class Sync
     {
         $source = $this->extractor->getSourceFromModel($this->profile->source);
         $dataset = $source->getDataset($this->profile->dataset_identifier);
+
+        if (! $dataset) {
+            throw new \RuntimeException("Dataset '{$this->profile->dataset_identifier}' could not be found for source '{$this->profile->source->name}'. Please check your configuration and ensure the dataset exists.");
+        }
+
         $liveSchema = $dataset->getSchema();
         $liveSchemaHash = hash('sha256', json_encode($liveSchema->fields));
 

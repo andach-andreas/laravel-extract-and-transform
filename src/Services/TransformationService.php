@@ -24,11 +24,16 @@ class TransformationService
             // Hydrate configuration if selects are empty
             if (empty($selects)) {
                 $config = $transformation->configuration;
-                if (isset($config['selects'])) {
-                    foreach ($config['selects'] as $alias => $exprConfig) {
-                        $selects[$alias] = ExpressionFactory::make($exprConfig);
-                    }
+                // Support both 'columns' (new GUI) and 'selects' (legacy/manual) keys
+                $columns = $config['columns'] ?? $config['selects'] ?? [];
+
+                foreach ($columns as $alias => $exprConfig) {
+                    $selects[$alias] = ExpressionFactory::make($exprConfig);
                 }
+            }
+
+            if (empty($selects)) {
+                throw new \Exception('No columns defined for transformation.');
             }
 
             // 1. Determine Destination Table Name
@@ -117,10 +122,9 @@ class TransformationService
         }
 
         $selects = [];
-        if (isset($config['selects'])) {
-            foreach ($config['selects'] as $alias => $exprConfig) {
-                $selects[$alias] = ExpressionFactory::make($exprConfig);
-            }
+        $columns = $config['columns'] ?? $config['selects'] ?? [];
+        foreach ($columns as $alias => $exprConfig) {
+            $selects[$alias] = ExpressionFactory::make($exprConfig);
         }
 
         $query = DB::table($sourceTable);

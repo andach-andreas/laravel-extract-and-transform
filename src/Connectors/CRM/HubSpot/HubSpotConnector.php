@@ -1,6 +1,6 @@
 <?php
 
-namespace Andach\ExtractAndTransform\Connectors\HubSpot;
+namespace Andach\ExtractAndTransform\Connectors\CRM\HubSpot;
 
 use Andach\ExtractAndTransform\Connectors\BaseConnector;
 use Andach\ExtractAndTransform\Connectors\ConnectorConfigDefinition;
@@ -9,7 +9,7 @@ use Andach\ExtractAndTransform\Services\RetryService;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Support\Facades\Http;
 
-final class HubSpotConnector extends BaseConnector
+class HubSpotConnector extends BaseConnector
 {
     private RetryService $retryService;
 

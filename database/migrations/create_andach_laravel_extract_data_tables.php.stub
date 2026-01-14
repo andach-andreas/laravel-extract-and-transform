@@ -37,7 +37,7 @@ return new class extends Migration {
             $table->text('source_schema_hash');
             $table->text('config_hash')->nullable();
             $table->timestamps();
-            $table->unique(['sync_profile_id', 'version_number']);
+            // $table->unique(['sync_profile_id', 'version_number']);
         });
 
         Schema::table($prefix . 'sync_profiles', function (Blueprint $table) use ($prefix) {

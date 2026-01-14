@@ -46,5 +46,8 @@ abstract class TestCase extends Orchestra
 
         $migration3 = include __DIR__.'/../database/migrations/create_andach_laravel_extract_data_correction_tables.php.stub';
         $migration3->up();
+
+        $migration4 = include __DIR__.'/../database/migrations/create_andach_laravel_extract_data_enrichment_tables.php.stub';
+        $migration4->up();
     }
 }

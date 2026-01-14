@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 class CaseExpression implements Expression
 {
     private mixed $trueValue = null;
+
     private mixed $falseValue = null;
 
     public function __construct(
@@ -21,12 +22,14 @@ class CaseExpression implements Expression
     public function then(mixed $value): self
     {
         $this->trueValue = $value;
+
         return $this;
     }
 
     public function else(mixed $value): self
     {
         $this->falseValue = $value;
+
         return $this;
     }
 
@@ -38,10 +41,10 @@ class CaseExpression implements Expression
 
         $valSql = $this->value instanceof Expression
             ? $this->unwrapRaw($this->value->compile($query), $grammar)
-            : $grammar->quoteString((string)$this->value); // Basic quoting, might need type check
+            : $grammar->quoteString((string) $this->value); // Basic quoting, might need type check
 
         // Handle numeric literals correctly (don't quote if int/float)
-        if (!($this->value instanceof Expression) && is_numeric($this->value)) {
+        if (! ($this->value instanceof Expression) && is_numeric($this->value)) {
             $valSql = $this->value;
         }
 
@@ -57,9 +60,10 @@ class CaseExpression implements Expression
             return $this->unwrapRaw($value->compile($query), $grammar);
         }
         if (is_numeric($value)) {
-            return (string)$value;
+            return (string) $value;
         }
-        return $grammar->quoteString((string)$value);
+
+        return $grammar->quoteString((string) $value);
     }
 
     public function toArray(): array
@@ -79,6 +83,7 @@ class CaseExpression implements Expression
         if ($value instanceof \Illuminate\Database\Query\Expression) {
             return $value->getValue($grammar);
         }
+
         return $value;
     }
 }

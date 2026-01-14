@@ -16,51 +16,36 @@ final class WatermarkStrategy implements SyncStrategy
     {
         $activeVersion = $profile->activeSchemaVersion;
         $localTable = $activeVersion->local_table_name;
-        $mapping = $activeVersion->column_mapping ?? null;
         $config = $activeVersion->configuration ?? [];
-        $mode = $config['mode'] ?? 'append_only';
-        $watermarkColumn = $config['watermark_column'] ?? 'id';
-        $primaryKey = $config['primary_key'] ?? 'id';
-
-        $lastRun = $profile->runs()->where('status', 'success')->latest('finished_at')->first();
-        $checkpoint = $lastRun ? $lastRun->checkpoint : null;
+        $mapping = $activeVersion->column_mapping ?? null;
+        $watermarkColumn = $config['watermark_column'] ?? 'updated_at';
 
         $dataset = $source->getDataset($profile->dataset_identifier);
-        if (! $dataset) {
-            throw new \Exception("Dataset {$profile->dataset_identifier} not found in source.");
+        $checkpoint = $run->checkpoint;
+        $options = ['watermark_column' => $watermarkColumn];
+
+        $generator = $dataset->getRowsWithCheckpoint($checkpoint, $options);
+
+        $rowsToInsert = [];
+        while ($generator->valid()) {
+            $row = $generator->current();
+            $transformedRow = $this->transformer->transform($row, $mapping);
+            $rowsToInsert[] = $transformedRow;
+            $generator->next();
         }
-
-        $rowsAdded = 0;
-        $rowsUpdated = 0;
-
-        $generator = $dataset->getRowsWithCheckpoint($checkpoint, [
-            'strategy' => 'time_watermark',
-            'watermark' => $watermarkColumn,
-        ]);
-
-        DB::transaction(function () use ($generator, $mode, $localTable, $primaryKey, $mapping, &$rowsAdded, &$rowsUpdated) {
-            foreach ($generator as $row) {
-                $transformedRow = $this->transformer->transform($row, $mapping);
-
-                if ($mode === 'append_only') {
-                    DB::table($localTable)->insert($transformedRow);
-                    $rowsAdded++;
-                } elseif ($mode === 'upsert') {
-                    DB::table($localTable)->upsert(
-                        $transformedRow,
-                        [$primaryKey],
-                        array_keys($transformedRow)
-                    );
-                    $rowsUpdated++;
-                }
-            }
-        });
 
         $newCheckpoint = $generator->getReturn();
 
+        if (! empty($rowsToInsert)) {
+            DB::transaction(function () use ($localTable, $rowsToInsert) {
+                foreach (array_chunk($rowsToInsert, 500) as $chunk) {
+                    DB::table($localTable)->insert($chunk);
+                }
+            });
+        }
+
         $run->update([
-            'rows_added' => $rowsAdded,
-            'rows_updated' => $rowsUpdated,
+            'rows_added' => count($rowsToInsert),
             'checkpoint' => $newCheckpoint,
         ]);
     }

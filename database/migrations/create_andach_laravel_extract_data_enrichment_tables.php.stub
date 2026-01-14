@@ -1,0 +1,41 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        $prefix = config('extract-data.internal_table_prefix', 'andach_leat_');
+
+        Schema::create($prefix . 'enrichment_profiles', function (Blueprint $table) {
+            $table->id();
+            $table->string('name')->unique();
+            $table->string('provider'); // e.g. 'companies_house'
+            $table->string('source_table');
+            $table->string('source_column');
+            $table->string('destination_table');
+            $table->json('config');
+            $table->timestamps();
+        });
+
+        Schema::create($prefix . 'enrichment_runs', function (Blueprint $table) use ($prefix) {
+            $table->id();
+            $table->foreignId('enrichment_profile_id')->constrained($prefix . 'enrichment_profiles')->cascadeOnDelete();
+            $table->string('status');
+            $table->timestamp('started_at')->nullable();
+            $table->timestamp('finished_at')->nullable();
+            $table->unsignedInteger('rows_added')->default(0);
+            $table->text('log_message')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        $prefix = config('extract-data.internal_table_prefix', 'andach_leat_');
+        Schema::dropIfExists($prefix . 'enrichment_runs');
+        Schema::dropIfExists($prefix . 'enrichment_profiles');
+    }
+};

@@ -7,6 +7,7 @@ use Andach\ExtractAndTransform\Transform\Expressions\ConcatExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\LookupExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\MapExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\MathExpression;
+use Andach\ExtractAndTransform\Transform\Expressions\NumericFunctionExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\StringFunctionExpression;
 use InvalidArgumentException;
 
@@ -20,7 +21,7 @@ class ExpressionFactory
         }
 
         return match ($config['type']) {
-            'column' => new ColumnExpression($config['column']),
+            'col', 'column' => new ColumnExpression($config['column']),
             'concat' => new ConcatExpression(
                 array_map(fn ($part) => self::make($part), $config['parts'])
             ),
@@ -32,6 +33,11 @@ class ExpressionFactory
                 self::make($config['right'])
             ),
             'string_function' => new StringFunctionExpression(
+                $config['function'],
+                self::make($config['column']),
+                $config['arguments'] ?? []
+            ),
+            'numeric_function' => new NumericFunctionExpression(
                 $config['function'],
                 self::make($config['column']),
                 $config['arguments'] ?? []

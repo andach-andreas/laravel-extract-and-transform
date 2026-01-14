@@ -2,7 +2,7 @@
 
 namespace Andach\ExtractAndTransform\Tests\Unit\Connectors\HubSpot;
 
-use Andach\ExtractAndTransform\Connectors\HubSpot\HubSpotConnector;
+use Andach\ExtractAndTransform\Connectors\CRM\HubSpot\HubSpotConnector;
 use Andach\ExtractAndTransform\Data\RemoteDataset;
 use Andach\ExtractAndTransform\Tests\TestCase;
 use Illuminate\Support\Facades\Http;

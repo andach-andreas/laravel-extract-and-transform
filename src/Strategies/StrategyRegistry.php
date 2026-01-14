@@ -22,4 +22,12 @@ final class StrategyRegistry
 
         return $this->strategies[$key];
     }
+
+    /**
+     * @return array<string, SyncStrategy>
+     */
+    public function all(): array
+    {
+        return $this->strategies;
+    }
 }

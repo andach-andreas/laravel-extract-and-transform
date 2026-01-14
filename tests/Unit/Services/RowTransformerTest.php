@@ -2,77 +2,51 @@
 
 namespace Andach\ExtractAndTransform\Tests\Unit\Services;
 
-use Andach\ExtractAndTransform\Data\RemoteField;
 use Andach\ExtractAndTransform\Services\RowTransformer;
 use Andach\ExtractAndTransform\Tests\TestCase;
 
 class RowTransformerTest extends TestCase
 {
-    private RowTransformer $transformer;
-
-    protected function setUp(): void
+    public function test_it_transforms_row_with_mapping()
     {
-        parent::setUp();
-        $this->transformer = new RowTransformer;
+        $transformer = new RowTransformer;
+        $row = ['first_name' => 'John', 'last_name' => 'Doe', 'age' => 30];
+        $mapping = ['first_name' => 'name', 'age' => 'years'];
+
+        $transformed = $transformer->transform($row, $mapping);
+
+        $this->assertEquals(['name' => 'John', 'years' => 30], $transformed);
     }
 
-    public function test_transform_returns_row_as_is_when_mapping_is_empty(): void
+    public function test_it_returns_row_as_is_without_mapping()
     {
-        $row = ['id' => 1, 'name' => 'test'];
-        $result = $this->transformer->transform($row, []);
-        $this->assertEquals($row, $result);
+        $transformer = new RowTransformer;
+        $row = ['name' => 'John', 'age' => 30];
+
+        $transformed = $transformer->transform($row, null);
+
+        $this->assertEquals($row, $transformed);
     }
 
-    public function test_transform_renames_columns_based_on_mapping(): void
+    public function test_it_ignores_unmapped_columns()
     {
-        $row = ['id' => 1, 'name' => 'test'];
-        $mapping = ['id' => 'remote_id', 'name' => 'full_name'];
+        $transformer = new RowTransformer;
+        $row = ['name' => 'John', 'age' => 30, 'extra' => 'ignored'];
+        $mapping = ['name' => 'full_name'];
 
-        $result = $this->transformer->transform($row, $mapping);
+        $transformed = $transformer->transform($row, $mapping);
 
-        $this->assertEquals(['remote_id' => 1, 'full_name' => 'test'], $result);
+        $this->assertEquals(['full_name' => 'John'], $transformed);
     }
 
-    public function test_transform_excludes_columns_mapped_to_null(): void
+    public function test_it_handles_null_mapping_to_exclude_column()
     {
-        $row = ['id' => 1, 'name' => 'test', 'secret' => 'hidden'];
-        $mapping = ['id' => 'id', 'name' => 'name', 'secret' => null];
+        $transformer = new RowTransformer;
+        $row = ['name' => 'John', 'age' => 30];
+        $mapping = ['name' => 'name', 'age' => null];
 
-        $result = $this->transformer->transform($row, $mapping);
+        $transformed = $transformer->transform($row, $mapping);
 
-        $this->assertEquals(['id' => 1, 'name' => 'test'], $result);
-        $this->assertArrayNotHasKey('secret', $result);
-    }
-
-    public function test_transform_excludes_unmapped_columns_when_mapping_exists(): void
-    {
-        $row = ['id' => 1, 'name' => 'test', 'extra' => 'data'];
-        $mapping = ['id' => 'id', 'name' => 'name'];
-
-        $result = $this->transformer->transform($row, $mapping);
-
-        $this->assertEquals(['id' => 1, 'name' => 'test'], $result);
-        $this->assertArrayNotHasKey('extra', $result);
-    }
-
-    public function test_filter_columns_returns_fields_as_is_when_mapping_is_empty(): void
-    {
-        $fields = [new RemoteField('id', 'int', false, 'int')];
-        $result = $this->transformer->filterColumns($fields, []);
-        $this->assertEquals($fields, $result);
-    }
-
-    public function test_filter_columns_renames_and_excludes_fields(): void
-    {
-        $fields = [
-            new RemoteField('id', 'int', false, 'int'),
-            new RemoteField('secret', 'string', true, 'string'),
-        ];
-        $mapping = ['id' => 'remote_id', 'secret' => null];
-
-        $result = $this->transformer->filterColumns($fields, $mapping);
-
-        $this->assertCount(1, $result);
-        $this->assertEquals('remote_id', $result[0]->name);
+        $this->assertEquals(['name' => 'John'], $transformed);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Andach\ExtractAndTransform\Connectors\Csv;
+namespace Andach\ExtractAndTransform\Connectors\General\Csv;
 
 use Andach\ExtractAndTransform\Connectors\BaseConnector;
 use Andach\ExtractAndTransform\Connectors\ConnectorConfigDefinition;
@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 use RuntimeException;
 
-final class CsvConnector extends BaseConnector
+class CsvConnector extends BaseConnector
 {
     private RetryService $retryService;
 

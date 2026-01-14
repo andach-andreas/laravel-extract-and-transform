@@ -14,11 +14,6 @@ class ReconcileService
             Schema::drop($destinationTable);
         }
 
-        // SQLite doesn't support CREATE TABLE AS SELECT * FROM ... in one go nicely with indexes,
-        // but for raw data copy it works.
-        // However, Laravel Schema builder is safer for structure, but we want data too.
-        // DB::statement("CREATE TABLE $destinationTable AS SELECT * FROM $sourceTable") works in most DBs.
-
         DB::statement("CREATE TABLE {$destinationTable} AS SELECT * FROM {$sourceTable}");
 
         // 2. Find columns that have corrections
@@ -30,11 +25,9 @@ class ReconcileService
             ->distinct()
             ->pluck('column_name');
 
-        $rowsAffected = 0;
-
         // 3. Apply updates per column
         foreach ($columnsToCorrect as $column) {
-            $rowsAffected += $this->applyCorrectionForColumn(
+            $this->applyCorrectionForColumn(
                 $sourceTable,
                 $destinationTable,
                 $identifier,
@@ -43,20 +36,13 @@ class ReconcileService
             );
         }
 
-        return $rowsAffected;
+        // 4. Return total rows in the new table
+        return DB::table($destinationTable)->count();
     }
 
     private function applyCorrectionForColumn(string $sourceTable, string $destinationTable, string|array $identifier, string $column, string $correctionsTable): int
     {
         $identifierSql = $this->buildIdentifierSql($identifier, $destinationTable);
-
-        // Standard SQL Update with Subquery
-        // UPDATE dest SET col = (SELECT new_value FROM corrections WHERE ...)
-        // WHERE EXISTS (SELECT 1 FROM corrections WHERE ...)
-
-        // We need to handle the case where new_value is text but destination column might be int.
-        // DB should handle implicit cast, or we might need casting.
-        // For now, assume DB handles it.
 
         $sql = "
             UPDATE {$destinationTable}

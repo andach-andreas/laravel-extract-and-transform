@@ -3,9 +3,15 @@
 namespace Andach\ExtractAndTransform;
 
 use Andach\ExtractAndTransform\Connectors\ConnectorRegistry;
-use Andach\ExtractAndTransform\Connectors\Csv\CsvConnector;
-use Andach\ExtractAndTransform\Connectors\HubSpot\HubSpotConnector;
-use Andach\ExtractAndTransform\Connectors\Sql\SqlConnector;
+use Andach\ExtractAndTransform\Connectors\CRM\HubSpot\HubSpotConnector;
+use Andach\ExtractAndTransform\Connectors\Finance\XeroConnector;
+use Andach\ExtractAndTransform\Connectors\General\Csv\CsvConnector;
+use Andach\ExtractAndTransform\Connectors\General\Excel\ExcelConnector;
+use Andach\ExtractAndTransform\Connectors\General\Excel\LegacyExcelConnector;
+use Andach\ExtractAndTransform\Connectors\General\Sql\SqlConnector;
+use Andach\ExtractAndTransform\Enrichment\Connectors\CompaniesHouseConnector;
+use Andach\ExtractAndTransform\Enrichment\EnrichmentRegistry;
+use Andach\ExtractAndTransform\Services\EnrichmentService;
 use Andach\ExtractAndTransform\Services\RetryService;
 use Andach\ExtractAndTransform\Services\RowTransformer;
 use Andach\ExtractAndTransform\Services\TableManager;
@@ -27,23 +33,30 @@ final class ExtractAndTransformServiceProvider extends PackageServiceProvider
             ->hasConfigFile('extract-data')
             ->hasMigration('create_andach_laravel_extract_data_tables')
             ->hasMigration('create_andach_laravel_extract_data_audit_tables')
-            ->hasMigration('create_andach_laravel_extract_data_correction_tables');
-        // ->hasAlias() method removed as it is not supported in this version.
+            ->hasMigration('create_andach_laravel_extract_data_correction_tables')
+            ->hasMigration('create_andach_laravel_extract_data_enrichment_tables')
+            ->hasViews('extract-data')
+            ->hasRoute('web');
     }
 
     public function packageRegistered(): void
     {
-        // Manually register the Facade alias.
         $loader = AliasLoader::getInstance();
         $loader->alias('ExtractAndTransform', \Andach\ExtractAndTransform\Facades\ExtractAndTransform::class);
 
-        // Register services into the container.
-        $this->app->singleton(ConnectorRegistry::class);
-        $this->app->singleton(StrategyRegistry::class);
+        // Core Services
         $this->app->singleton(ExtractAndTransform::class);
         $this->app->singleton(TableManager::class);
         $this->app->singleton(RowTransformer::class);
         $this->app->singleton(RetryService::class);
+
+        // Sync Services
+        $this->app->singleton(ConnectorRegistry::class);
+        $this->app->singleton(StrategyRegistry::class);
+
+        // Enrichment Services
+        $this->app->singleton(EnrichmentRegistry::class);
+        $this->app->singleton(EnrichmentService::class);
 
         $this->app->afterResolving(
             ConnectorRegistry::class,
@@ -51,6 +64,9 @@ final class ExtractAndTransformServiceProvider extends PackageServiceProvider
                 $registry->register(app(CsvConnector::class));
                 $registry->register(app(SqlConnector::class));
                 $registry->register(app(HubSpotConnector::class));
+                $registry->register(app(XeroConnector::class));
+                $registry->register(app(ExcelConnector::class));
+                $registry->register(app(LegacyExcelConnector::class));
             }
         );
 
@@ -61,6 +77,13 @@ final class ExtractAndTransformServiceProvider extends PackageServiceProvider
                 $registry->register('watermark', app(WatermarkStrategy::class));
                 $registry->register('id_diff', app(IdDiffStrategy::class));
                 $registry->register('content_hash', app(ContentHashStrategy::class));
+            }
+        );
+
+        $this->app->afterResolving(
+            EnrichmentRegistry::class,
+            function (EnrichmentRegistry $registry) {
+                $registry->register(app(CompaniesHouseConnector::class));
             }
         );
     }
@@ -75,7 +98,6 @@ final class ExtractAndTransformServiceProvider extends PackageServiceProvider
                         return null;
                     }
                     $parts = explode($delimiter, $string);
-                    // Position is 1-based
                     $index = $position - 1;
 
                     return $parts[$index] ?? null;
