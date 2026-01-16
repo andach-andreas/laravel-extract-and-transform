@@ -18,6 +18,8 @@ class TableManager
 
         if (! Schema::hasTable($tableName)) {
             $this->createTable($tableName, $profile, $version);
+        } else {
+            $this->updateTableSchema($tableName, $profile, $version);
         }
 
         return $tableName;
@@ -75,6 +77,38 @@ class TableManager
                 $type = $overrides[$sourceName] ?? $field->suggestedLocalType;
 
                 $this->addColumn($table, $localName, $type, true);
+            }
+        });
+    }
+
+    private function updateTableSchema(string $tableName, SyncProfile $profile, SchemaVersion $version): void
+    {
+        $mapping = $version->column_mapping ?? [];
+        $overrides = $version->schema_overrides ?? [];
+
+        $source = app(\Andach\ExtractAndTransform\ExtractAndTransform::class)->getSourceFromModel($profile->source);
+        $dataset = $source->getDataset($profile->dataset_identifier);
+        $schema = $dataset->getSchema();
+
+        Schema::table($tableName, function (Blueprint $table) use ($tableName, $schema, $mapping, $overrides) {
+            foreach ($schema->fields as $field) {
+                $sourceName = $field->name;
+
+                if (! empty($mapping)) {
+                    if (array_key_exists($sourceName, $mapping)) {
+                        $localName = $mapping[$sourceName];
+                        if ($localName === null) continue;
+                    } else {
+                        continue;
+                    }
+                } else {
+                    $localName = $sourceName;
+                }
+
+                if (! Schema::hasColumn($tableName, $localName)) {
+                    $type = $overrides[$sourceName] ?? $field->suggestedLocalType;
+                    $this->addColumn($table, $localName, $type, true);
+                }
             }
         });
     }

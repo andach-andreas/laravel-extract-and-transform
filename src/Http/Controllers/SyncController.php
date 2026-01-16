@@ -75,14 +75,20 @@ class SyncController extends Controller
         $strategy = $request->input('strategy', 'full_refresh');
         $tableName = $request->input('table_name');
         $mapping = $request->input('mapping', []);
+        $ignored = $request->input('ignored', []);
 
         $cleanMapping = [];
+
+        // Process mapped columns
         foreach ($mapping as $sourceKey => $destKey) {
             if (trim($destKey) !== '') {
                 $cleanMapping[$sourceKey] = trim($destKey);
-            } else {
-                $cleanMapping[$sourceKey] = null;
             }
+        }
+
+        // Process ignored columns (explicitly set to null)
+        foreach ($ignored as $sourceKey => $value) {
+            $cleanMapping[$sourceKey] = null;
         }
 
         try {

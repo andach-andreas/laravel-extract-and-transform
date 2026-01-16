@@ -30,7 +30,13 @@ class AuditController extends Controller
 
         $args['failedRows'] = collect();
         if ($args['auditRun']) {
-            $args['failedRows'] = $args['auditRun']->getFailedRows()->keyBy('id');
+            // Use the identifier column from the audit run to fetch rows
+            $identifier = $args['auditRun']->identifier_column;
+            // If identifier is array (composite), we can't easily keyBy.
+            // For now assuming single column identifier or __id.
+            $key = is_array($identifier) ? '__id' : $identifier;
+
+            $args['failedRows'] = $args['auditRun']->getFailedRows()->keyBy($key);
         }
 
         $args['corrections'] = Correction::where('table_name', $args['tableName'])
@@ -106,7 +112,10 @@ class AuditController extends Controller
         }
 
         $audit = ExtractAndTransform::audit($tableName);
-        $audit->identifiedBy('id');
+
+        // Use __id as the default identifier since it's guaranteed to exist
+        // Ideally this should be configurable in the UI
+        $audit->identifiedBy('__id');
 
         $checks = [];
         foreach ($config as $column => $rules) {

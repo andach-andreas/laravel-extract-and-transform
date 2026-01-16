@@ -37,7 +37,7 @@ class SqlConnector extends BaseConnector
             new ConnectorConfigDefinition(key: 'driver', label: 'Driver', type: 'text', required: false, help: 'e.g., mysql, pgsql'),
             new ConnectorConfigDefinition(key: 'host', label: 'Host', type: 'text', required: false),
             new ConnectorConfigDefinition(key: 'port', label: 'Port', type: 'text', required: false),
-            new ConnectorConfigDefinition(key: 'database', label: 'Database', type: 'text', required: false),
+            new ConnectorConfigDefinition(key: 'database', label: 'Database', type: 'text', required: true),
             new ConnectorConfigDefinition(key: 'username', label: 'Username', type: 'text', required: false),
             new ConnectorConfigDefinition(key: 'password', label: 'Password', type: 'password', required: false),
         ];
@@ -55,10 +55,24 @@ class SqlConnector extends BaseConnector
     public function datasets(array $config): array
     {
         $conn = $this->resolveConnectionName($config);
-        $tables = DB::connection($conn)->getSchemaBuilder()->getTables();
+        $connection = DB::connection($conn);
+        $driver = $connection->getDriverName();
+        $database = $config['database'] ?? $connection->getDatabaseName();
+
         $out = [];
+
+        if ($driver === 'mysql') {
+            // Explicitly query information_schema to ensure we only get tables for the target database
+            $tables = $connection->select('SELECT table_name as name FROM information_schema.tables WHERE table_schema = ?', [$database]);
+        } else {
+            // Fallback for other drivers
+            $tables = $connection->getSchemaBuilder()->getTables();
+        }
+
         foreach ($tables as $t) {
+            $t = (array) $t;
             $name = (string) ($t['name'] ?? ($t['table_name'] ?? ''));
+
             if ($name === '') {
                 continue;
             }
@@ -84,6 +98,7 @@ class SqlConnector extends BaseConnector
         $columns = DB::connection($conn)->getSchemaBuilder()->getColumns($table);
         $fields = [];
         foreach ($columns as $c) {
+            $c = (array) $c;
             $name = (string) ($c['name'] ?? '');
             $type = (string) ($c['type_name'] ?? ($c['type'] ?? ''));
             $nullable = (bool) ($c['nullable'] ?? true);

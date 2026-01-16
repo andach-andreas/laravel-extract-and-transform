@@ -67,7 +67,11 @@
                                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-1 border disabled:bg-gray-100">
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    <input type="checkbox" x-model="ignored" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                    <input type="checkbox"
+                                           name="ignored[{{ $field->name }}]"
+                                           value="1"
+                                           x-model="ignored"
+                                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
                                 </td>
                             </tr>
                         @endforeach
