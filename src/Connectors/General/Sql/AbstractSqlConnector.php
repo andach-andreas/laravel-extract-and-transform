@@ -10,6 +10,7 @@ use Andach\ExtractAndTransform\Data\RemoteSchema;
 use Andach\ExtractAndTransform\Services\RetryService;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log; // Added Log facade
 
 abstract class AbstractSqlConnector extends BaseConnector
 {
@@ -38,11 +39,15 @@ abstract class AbstractSqlConnector extends BaseConnector
 
     public function test(array $config): void
     {
+        Log::info("[SQL Connector] Testing connection for {$this->key()}...");
+        $startTime = microtime(true);
+
         $this->retryService->run(function () use ($config) {
             $conn = $this->resolveConnectionName($config);
-            // Removed reconnect() to allow connection reuse if already established
             DB::connection($conn)->select('select 1');
         });
+
+        Log::info("[SQL Connector] Connection test for {$this->key()} completed in " . round(microtime(true) - $startTime, 3) . "s.");
     }
 
     public function datasets(array $config): array
@@ -146,30 +151,35 @@ abstract class AbstractSqlConnector extends BaseConnector
 
     protected function resolveConnectionName(array $config): string
     {
+        $startTime = microtime(true);
         $explicit = $config['connection'] ?? null;
         if (is_string($explicit) && $explicit !== '') {
+            Log::info("[SQL Connector] Resolving connection: Using explicit connection '{$explicit}'.");
             return $explicit;
         }
-        $driver = $this->key(); // Use the key of the concrete connector as the driver
+        $driver = $this->key();
         if (! is_string($driver) || $driver === '') {
             throw new \InvalidArgumentException('SQL source config must include either {"connection": "..."} or DSN keys.');
         }
 
-        // Ensure config is sorted for consistent hash generation
         ksort($config);
         $name = 'extract_sql_'.substr(hash('sha256', json_encode($config) ?: ''), 0, 16);
 
         if (! Config::has("database.connections.{$name}")) {
             Config::set("database.connections.{$name}", $this->toLaravelConnectionConfig($config));
+            Log::info("[SQL Connector] Configured new dynamic connection '{$name}' for driver '{$driver}'.");
+        } else {
+            Log::info("[SQL Connector] Reusing existing dynamic connection config for '{$name}'.");
         }
-        // DB::purge($name); // This was removed, allowing connection reuse.
 
+        // DB::purge($name); // This was removed, allowing connection reuse.
+        Log::info("[SQL Connector] Resolved connection '{$name}' in " . round(microtime(true) - $startTime, 3) . "s.");
         return $name;
     }
 
     protected function toLaravelConnectionConfig(array $cfg): array
     {
-        $driver = $this->key(); // Use the key of the concrete connector as the driver
+        $driver = $this->key();
         if ($driver === 'sqlite') {
             return ['driver' => 'sqlite', 'database' => $cfg['database'] ?? ':memory:', 'prefix' => ''];
         }
