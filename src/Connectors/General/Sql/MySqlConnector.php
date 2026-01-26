@@ -6,7 +6,7 @@ use Andach\ExtractAndTransform\Data\RemoteDataset;
 use Andach\ExtractAndTransform\Data\RemoteField;
 use Andach\ExtractAndTransform\Data\RemoteSchema;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log; // Added Log facade
+use Illuminate\Support\Facades\Log;
 
 class MySqlConnector extends AbstractSqlConnector
 {
@@ -34,6 +34,7 @@ class MySqlConnector extends AbstractSqlConnector
         $tables = $connection->select("SHOW TABLES FROM `{$database}`");
         Log::info("[MySQL Connector] SHOW TABLES query completed in " . round(microtime(true) - $queryStartTime, 3) . "s. Found " . count($tables) . " tables.");
 
+        $processingStartTime = microtime(true);
         // Map the results to RemoteDataset objects
         $out = array_map(function ($table) {
             $tableArray = (array) $table;

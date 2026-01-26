@@ -7,6 +7,7 @@ use Andach\ExtractAndTransform\Models\ExtractSource;
 use Andach\ExtractAndTransform\Strategies\StrategyRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Log;
 
 class SyncController extends Controller
 {
@@ -28,6 +29,7 @@ class SyncController extends Controller
 
         // Eager load the latest run for each sync profile to prevent N+1 queries in the view
         $args['profiles'] = $args['sourceModel']->syncProfiles()->with('latestRun')->get()->keyBy('dataset_identifier');
+        Log::info('[MySQL Connector] index() completed.');
 
         return view(config('extract-data.views.syncs.index', 'extract-data::syncs.index'), $args);
     }
