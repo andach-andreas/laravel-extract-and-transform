@@ -97,7 +97,9 @@ class TableManager
                 if (! empty($mapping)) {
                     if (array_key_exists($sourceName, $mapping)) {
                         $localName = $mapping[$sourceName];
-                        if ($localName === null) continue;
+                        if ($localName === null) {
+                            continue;
+                        }
                     } else {
                         continue;
                     }

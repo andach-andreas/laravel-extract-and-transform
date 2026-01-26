@@ -34,7 +34,7 @@ class AuditorService
 
             // 1. Partition rules
             foreach ($rules as $column => $ruleClosure) {
-                $ruleBuilder = new RuleBuilder();
+                $ruleBuilder = new RuleBuilder;
                 $ruleClosure($ruleBuilder);
                 foreach ($ruleBuilder->getConstraints() as $constraint) {
                     if ($this->capabilityChecker->canRunInSql($constraint)) {
@@ -75,6 +75,7 @@ class AuditorService
                 $violations += $this->applySqlConstraint($run, $tableName, $identifier, $column, $constraint);
             }
         }
+
         return $violations;
     }
 
@@ -123,7 +124,7 @@ class AuditorService
             }
         });
 
-        if (!empty($violations)) {
+        if (! empty($violations)) {
             AuditLog::insert($violations);
         }
 
@@ -148,6 +149,7 @@ class AuditorService
                     }
                 }
             }
+
             return true;
         }
 
@@ -179,7 +181,7 @@ class AuditorService
             'numeric' => is_numeric($value),
             'integer' => is_numeric($value) && floor($value) == $value,
             'in' => in_array($value, $constraint['values']),
-            'not_in' => !in_array($value, $constraint['values']),
+            'not_in' => ! in_array($value, $constraint['values']),
             'min_length' => mb_strlen($value) >= $constraint['length'],
             'max_length' => mb_strlen($value) <= $constraint['length'],
             'greater_than' => is_numeric($value) && $value > $constraint['value'],
@@ -198,6 +200,7 @@ class AuditorService
         foreach ($identifier as $col) {
             $parts[] = $row->{$col};
         }
+
         return implode('-', $parts);
     }
 
@@ -262,10 +265,10 @@ class AuditorService
                 });
                 break;
             case 'starts_with':
-                $query->where($column, 'not like', $constraint['prefix'] . '%');
+                $query->where($column, 'not like', $constraint['prefix'].'%');
                 break;
             case 'ends_with':
-                $query->where($column, 'not like', '%' . $constraint['suffix']);
+                $query->where($column, 'not like', '%'.$constraint['suffix']);
                 break;
             default:
                 return 0;
@@ -278,12 +281,12 @@ class AuditorService
         );
 
         $prefix = config('extract-data.internal_table_prefix', 'andach_leat_');
-        $logTable = $prefix . 'audit_logs';
+        $logTable = $prefix.'audit_logs';
 
         $sql = "INSERT INTO {$logTable} (audit_run_id, row_identifier, column_name, rule_name, severity, message, created_at, updated_at) ";
         $sql .= $subQuery->toSql();
 
-        Log::info("Audit SQL: " . $sql, $subQuery->getBindings());
+        Log::info('Audit SQL: '.$sql, $subQuery->getBindings());
 
         DB::connection()->insert($sql, $subQuery->getBindings());
 
@@ -299,11 +302,13 @@ class AuditorService
         $driver = DB::connection()->getDriverName();
 
         if ($driver === 'sqlite') {
-             $cols = implode(" || '-' || ", array_map(fn($col) => "`{$col}`", $identifier));
-             return $cols;
+            $cols = implode(" || '-' || ", array_map(fn ($col) => "`{$col}`", $identifier));
+
+            return $cols;
         }
 
-        $cols = implode(", '-', ", array_map(fn($col) => "`{$col}`", $identifier));
+        $cols = implode(", '-', ", array_map(fn ($col) => "`{$col}`", $identifier));
+
         return "CONCAT({$cols})";
     }
 
@@ -336,19 +341,24 @@ class AuditorService
         if (strlen($isbn) === 10) {
             $sum = 0;
             for ($i = 0; $i < 9; $i++) {
-                $sum += (int)$isbn[$i] * (10 - $i);
+                $sum += (int) $isbn[$i] * (10 - $i);
             }
             $check = 11 - ($sum % 11);
-            if ($check === 11) $check = 0;
+            if ($check === 11) {
+                $check = 0;
+            }
+
             return ($check == 10 && strtoupper($isbn[9]) == 'X') || ($check == $isbn[9]);
         } elseif (strlen($isbn) === 13) {
             $sum = 0;
             for ($i = 0; $i < 12; $i++) {
-                $sum += (int)$isbn[$i] * (($i % 2 === 0) ? 1 : 3);
+                $sum += (int) $isbn[$i] * (($i % 2 === 0) ? 1 : 3);
             }
             $check = (10 - ($sum % 10)) % 10;
+
             return $check == $isbn[12];
         }
+
         return false;
     }
 
@@ -361,6 +371,7 @@ class AuditorService
     private function validateDateFormat(string $value, string $format): bool
     {
         $d = DateTime::createFromFormat($format, $value);
+
         return $d && $d->format($format) === $value;
     }
 }
