@@ -6,8 +6,8 @@ use Andach\ExtractAndTransform\Connectors\ConnectorRegistry;
 use Andach\ExtractAndTransform\Connectors\General\Sql\SqliteConnector;
 use Andach\ExtractAndTransform\Tests\TestCase;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 
 class SqliteConnectorTest extends TestCase
 {
@@ -17,7 +17,7 @@ class SqliteConnectorTest extends TestCase
     {
         parent::setUp();
 
-        $this->sqliteFilePath = sys_get_temp_dir() . '/test_db.sqlite';
+        $this->sqliteFilePath = sys_get_temp_dir().'/test_db.sqlite';
         // Ensure the file exists and is empty before each test
         if (File::exists($this->sqliteFilePath)) {
             File::delete($this->sqliteFilePath);
@@ -28,9 +28,8 @@ class SqliteConnectorTest extends TestCase
         $this->app['config']->set('database.default', 'sqlite_file_test');
         $this->app['config']->set('database.connections.sqlite_file_test.database', $this->sqliteFilePath);
 
-
         // Register the connector
-        app(ConnectorRegistry::class)->register(new SqliteConnector());
+        app(ConnectorRegistry::class)->register(new SqliteConnector);
 
         // Create a test table in the SQLite database
         Schema::connection('sqlite_file_test')->create('test_sqlite_table', function ($table) {

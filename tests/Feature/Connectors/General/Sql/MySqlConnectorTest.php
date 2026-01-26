@@ -18,7 +18,7 @@ class MySqlConnectorTest extends TestCase
         parent::setUp();
 
         // Ensure MySQL connection is available
-        if (!env('DB_MYSQL_HOST')) {
+        if (! env('DB_MYSQL_HOST')) {
             $this->markTestSkipped('MySQL connection not configured.');
         }
 
@@ -26,7 +26,7 @@ class MySqlConnectorTest extends TestCase
         $this->app['config']->set('database.default', 'mysql_test');
 
         // Register the connector
-        app(ConnectorRegistry::class)->register(new MySqlConnector());
+        app(ConnectorRegistry::class)->register(new MySqlConnector);
 
         // Create a test table in the MySQL database
         Schema::connection('mysql_test')->dropIfExists('test_mysql_table');

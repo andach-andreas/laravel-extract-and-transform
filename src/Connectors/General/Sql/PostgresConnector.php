@@ -29,7 +29,7 @@ class PostgresConnector extends AbstractSqlConnector
         $out = [];
 
         // Use information_schema for PostgreSQL, filtering by schema
-        $tables = $connection->select("SELECT table_name as name FROM information_schema.tables WHERE table_schema = ?", [$schema]);
+        $tables = $connection->select('SELECT table_name as name FROM information_schema.tables WHERE table_schema = ?', [$schema]);
 
         foreach ($tables as $table) {
             $tableArray = (array) $table;
@@ -61,6 +61,7 @@ class PostgresConnector extends AbstractSqlConnector
     {
         $base = parent::toLaravelConnectionConfig($cfg);
         $base['schema'] = (string) ($cfg['schema'] ?? 'public');
+
         return $base;
     }
 }

@@ -18,7 +18,7 @@ class PostgresConnectorTest extends TestCase
         parent::setUp();
 
         // Ensure PostgreSQL connection is available
-        if (!env('DB_PGSQL_HOST')) {
+        if (! env('DB_PGSQL_HOST')) {
             $this->markTestSkipped('PostgreSQL connection not configured.');
         }
 
@@ -26,7 +26,7 @@ class PostgresConnectorTest extends TestCase
         $this->app['config']->set('database.default', 'pgsql_test');
 
         // Register the connector
-        app(ConnectorRegistry::class)->register(new PostgresConnector());
+        app(ConnectorRegistry::class)->register(new PostgresConnector);
 
         // Create a test table in the PostgreSQL database
         Schema::connection('pgsql_test')->dropIfExists('test_pgsql_table');

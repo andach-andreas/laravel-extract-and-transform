@@ -55,7 +55,7 @@ abstract class TestCase extends Orchestra
         // Use a temporary file for SQLite file tests
         $app['config']->set('database.connections.sqlite_file_test', [
             'driver' => 'sqlite',
-            'database' => sys_get_temp_dir() . '/test_db.sqlite',
+            'database' => sys_get_temp_dir().'/test_db.sqlite',
             'prefix' => '',
         ]);
 

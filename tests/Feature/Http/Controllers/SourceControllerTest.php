@@ -5,7 +5,6 @@ namespace Andach\ExtractAndTransform\Tests\Feature\Http\Controllers;
 use Andach\ExtractAndTransform\Models\ExtractSource;
 use Andach\ExtractAndTransform\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Config;
 
 class SourceControllerTest extends TestCase
 {
