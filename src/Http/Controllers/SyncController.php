@@ -7,7 +7,6 @@ use Andach\ExtractAndTransform\Models\ExtractSource;
 use Andach\ExtractAndTransform\Strategies\StrategyRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Log;
 
 class SyncController extends Controller
 {
@@ -22,14 +21,28 @@ class SyncController extends Controller
         $sourceWrapper = ExtractAndTransform::getSourceFromModel($args['sourceModel']);
 
         try {
-            $args['datasets'] = iterator_to_array($sourceWrapper->listDatasets());
+            $datasets = iterator_to_array($sourceWrapper->listDatasets());
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to list datasets: ' . $e->getMessage());
         }
 
+        $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
+
         // Eager load the latest run for each sync profile to prevent N+1 queries in the view
-        $args['profiles'] = $args['sourceModel']->syncProfiles()->with('latestRun')->get()->keyBy('dataset_identifier');
-        Log::info('[MySQL Connector] index() completed.');
+        $profiles = $args['sourceModel']->syncProfiles()->with('latestRun')->get()->keyBy('dataset_identifier');
+
+        // Pre-generate URLs for each dataset to avoid calling route() helper in Blade loop
+        $args['datasets'] = collect($datasets)->map(function($dataset) use ($args, $routePrefix, $profiles) {
+            $dataset->configureUrl = route($routePrefix . 'syncs.configure', ['source' => $args['sourceModel']->id, 'dataset' => $dataset->getIdentifier()]);
+            $dataset->storeUrl = route($routePrefix . 'syncs.store', $args['sourceModel']->id);
+            // Attach profile and lastRun directly to the dataset object for easier access in view
+            $dataset->profile = $profiles[$dataset->getIdentifier()] ?? null;
+            $dataset->lastRun = $dataset->profile ? $dataset->profile->latestRun : null;
+            return $dataset;
+        })->all();
+
+        // No longer need $args['profiles'] separately as it's attached to datasets
+        // $args['profiles'] = $profiles;
 
         return view(config('extract-data.views.syncs.index', 'extract-data::syncs.index'), $args);
     }

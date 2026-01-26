@@ -37,8 +37,7 @@
             <tbody class="bg-white divide-y divide-gray-200">
                 @forelse($datasets as $dataset)
                     @php
-                        $profile = $profiles[$dataset->getIdentifier()] ?? null;
-                        $lastRun = $profile ? $profile->latestRun : null; // Use latestRun relationship
+                        $lastRun = $dataset->lastRun;
                     @endphp
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -69,9 +68,9 @@
                             @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <a href="{{ route(config('extract-data.route_name_prefix', 'andach-leat.') . 'syncs.configure', ['source' => $sourceModel->id, 'dataset' => $dataset->getIdentifier()]) }}" class="text-indigo-600 hover:text-indigo-900 mr-4">Configure</a>
+                            <a href="{{ $dataset->configureUrl }}" class="text-indigo-600 hover:text-indigo-900 mr-4">Configure</a>
 
-                            <form action="{{ route(config('extract-data.route_name_prefix', 'andach-leat.') . 'syncs.store', $sourceModel->id) }}" method="POST" class="inline">
+                            <form action="{{ $dataset->storeUrl }}" method="POST" class="inline">
                                 @csrf
                                 <input type="hidden" name="dataset" value="{{ $dataset->getIdentifier() }}">
                                 <button type="submit" class="text-gray-600 hover:text-gray-900">Quick Sync</button>
