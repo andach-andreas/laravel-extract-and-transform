@@ -39,7 +39,9 @@ class GuiSupportTest extends TestCase
 
         $this->assertIsArray($connectors);
         $this->assertArrayHasKey('csv', $connectors);
-        $this->assertArrayHasKey('sql', $connectors);
+        $this->assertArrayHasKey('mysql', $connectors); // Check for new MySQL connector
+        $this->assertArrayHasKey('pgsql', $connectors); // Check for new PostgreSQL connector
+        $this->assertArrayHasKey('sqlite', $connectors); // Check for new SQLite connector
         $this->assertEquals('CSV', $connectors['csv']);
     }
 

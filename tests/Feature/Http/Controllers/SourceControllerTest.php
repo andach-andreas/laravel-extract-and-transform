@@ -5,6 +5,7 @@ namespace Andach\ExtractAndTransform\Tests\Feature\Http\Controllers;
 use Andach\ExtractAndTransform\Models\ExtractSource;
 use Andach\ExtractAndTransform\Tests\TestCase;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 
 class SourceControllerTest extends TestCase
 {
@@ -62,15 +63,15 @@ class SourceControllerTest extends TestCase
 
         $response = $this->put("/andach-leat/sources/{$source->id}", [
             'name' => 'Updated Name',
-            'connector' => 'sql',
-            'config' => ['connection' => 'mysql'],
+            'connector' => 'mysql', // Use mysql connector
+            'config' => ['database' => 'test_db'],
         ]);
 
         $response->assertRedirect('/andach-leat/sources');
         $this->assertDatabaseHas('andach_leat_extract_sources', [
             'id' => $source->id,
             'name' => 'Updated Name',
-            'connector' => 'sql',
+            'connector' => 'mysql',
         ]);
     }
 

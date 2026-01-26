@@ -30,7 +30,7 @@ class SqlTest extends TestCase
     public function test_it_can_sync_from_a_sql_table()
     {
         // We use the 'testing' connection which is already set up in TestCase
-        $source = ExtractAndTransform::createSource('Local SQL', 'sql', [
+        $source = ExtractAndTransform::createSource('Local SQL', 'sqlite', [
             'connection' => 'testing',
         ]);
 
@@ -49,7 +49,7 @@ class SqlTest extends TestCase
 
     public function test_it_can_sync_with_column_mapping()
     {
-        $source = ExtractAndTransform::createSource('Local SQL', 'sql', [
+        $source = ExtractAndTransform::createSource('Local SQL', 'sqlite', [
             'connection' => 'testing',
         ]);
 

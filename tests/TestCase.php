@@ -16,11 +16,46 @@ abstract class TestCase extends Orchestra
 
     protected function getEnvironmentSetUp($app)
     {
-        // Use an in-memory SQLite database for testing
+        // Use an in-memory SQLite database for default testing
         $app['config']->set('database.default', 'testing');
         $app['config']->set('database.connections.testing', [
             'driver' => 'sqlite',
             'database' => ':memory:',
+            'prefix' => '',
+        ]);
+
+        // Add connections for MySQL, PostgreSQL, and SQLite for specific tests
+        $app['config']->set('database.connections.mysql_test', [
+            'driver' => 'mysql',
+            'host' => env('DB_MYSQL_HOST', '127.0.0.1'),
+            'port' => env('DB_MYSQL_PORT', '3306'),
+            'database' => env('DB_MYSQL_DATABASE', 'test_db'),
+            'username' => env('DB_MYSQL_USERNAME', 'root'),
+            'password' => env('DB_MYSQL_PASSWORD', 'password'),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ]);
+
+        $app['config']->set('database.connections.pgsql_test', [
+            'driver' => 'pgsql',
+            'host' => env('DB_PGSQL_HOST', '127.0.0.1'),
+            'port' => env('DB_PGSQL_PORT', '5432'),
+            'database' => env('DB_PGSQL_DATABASE', 'test_db'),
+            'username' => env('DB_PGSQL_USERNAME', 'postgres'),
+            'password' => env('DB_PGSQL_PASSWORD', 'password'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'schema' => 'public',
+            'sslmode' => 'prefer',
+        ]);
+
+        // Use a temporary file for SQLite file tests
+        $app['config']->set('database.connections.sqlite_file_test', [
+            'driver' => 'sqlite',
+            'database' => sys_get_temp_dir() . '/test_db.sqlite',
             'prefix' => '',
         ]);
 

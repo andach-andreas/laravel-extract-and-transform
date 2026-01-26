@@ -22,10 +22,10 @@ class AuditControllerTest extends TestCase
         parent::setUp();
 
         Schema::create('test_table', function ($table) {
-            $table->id();
+            $table->id('__id'); // Use __id to match the service's expectation
             $table->string('name')->nullable();
         });
-        DB::table('test_table')->insert(['id' => 1, 'name' => 'Test']);
+        DB::table('test_table')->insert(['__id' => 1, 'name' => 'Test']);
     }
 
     public function test_index_page_loads()
@@ -123,13 +123,13 @@ class AuditControllerTest extends TestCase
         $version = SchemaVersion::create(['sync_profile_id' => $profile->id, 'version_number' => 1, 'local_table_name' => 'test_table', 'source_schema_hash' => 'h']);
         $profile->update(['active_schema_version_id' => $version->id]);
         $run = SyncRun::create(['sync_profile_id' => $profile->id, 'status' => 'success']);
-        AuditRun::create(['table_name' => 'test_table', 'identifier_column' => 'id', 'status' => 'success']);
+        AuditRun::create(['table_name' => 'test_table', 'identifier_column' => '__id', 'status' => 'success']);
         Correction::create(['table_name' => 'test_table', 'row_identifier' => 1, 'column_name' => 'name', 'new_value' => 'Corrected Name']);
 
         $response = $this->post("/andach-leat/syncs/{$run->id}/audit/reconcile");
 
         $response->assertRedirect();
         $this->assertTrue(Schema::hasTable('test_table_reconciled'));
-        $this->assertDatabaseHas('test_table_reconciled', ['id' => 1, 'name' => 'Corrected Name']);
+        $this->assertDatabaseHas('test_table_reconciled', ['__id' => 1, 'name' => 'Corrected Name']);
     }
 }

@@ -8,7 +8,9 @@ use Andach\ExtractAndTransform\Connectors\Finance\XeroConnector;
 use Andach\ExtractAndTransform\Connectors\General\Csv\CsvConnector;
 use Andach\ExtractAndTransform\Connectors\General\Excel\ExcelConnector;
 use Andach\ExtractAndTransform\Connectors\General\Excel\LegacyExcelConnector;
-use Andach\ExtractAndTransform\Connectors\General\Sql\SqlConnector;
+use Andach\ExtractAndTransform\Connectors\General\Sql\MySqlConnector;
+use Andach\ExtractAndTransform\Connectors\General\Sql\PostgresConnector;
+use Andach\ExtractAndTransform\Connectors\General\Sql\SqliteConnector;
 use Andach\ExtractAndTransform\Enrichment\Connectors\CompaniesHouseConnector;
 use Andach\ExtractAndTransform\Enrichment\EnrichmentRegistry;
 use Andach\ExtractAndTransform\Services\EnrichmentService;
@@ -62,7 +64,9 @@ final class ExtractAndTransformServiceProvider extends PackageServiceProvider
             ConnectorRegistry::class,
             function (ConnectorRegistry $registry) {
                 $registry->register(app(CsvConnector::class));
-                $registry->register(app(SqlConnector::class));
+                $registry->register(app(MySqlConnector::class));
+                $registry->register(app(PostgresConnector::class));
+                $registry->register(app(SqliteConnector::class));
                 $registry->register(app(HubSpotConnector::class));
                 $registry->register(app(XeroConnector::class));
                 $registry->register(app(ExcelConnector::class));
