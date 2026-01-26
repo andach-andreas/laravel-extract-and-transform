@@ -8,7 +8,6 @@ use Andach\ExtractAndTransform\Models\Correction;
 use Andach\ExtractAndTransform\Models\SyncRun;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class AuditController extends Controller
@@ -20,7 +19,7 @@ class AuditController extends Controller
 
         $args['tableName'] = $args['syncRun']->profile->activeSchemaVersion->local_table_name ?? null;
 
-        if (!$args['tableName']) {
+        if (! $args['tableName']) {
             return back()->with('error', 'No active table found for this sync.');
         }
 
@@ -42,7 +41,7 @@ class AuditController extends Controller
         $args['corrections'] = Correction::where('table_name', $args['tableName'])
             ->get()
             ->groupBy('row_identifier')
-            ->map(fn($group) => $group->keyBy('column_name'));
+            ->map(fn ($group) => $group->keyBy('column_name'));
 
         return view(config('extract-data.views.audit.index', 'extract-data::audit.index'), $args);
     }
@@ -95,7 +94,8 @@ class AuditController extends Controller
         $activeVersion->update(['configuration' => $config]);
 
         $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
-        return redirect()->route($routePrefix . 'audit.index', $syncRunId)->with('success', 'Audit rules saved.');
+
+        return redirect()->route($routePrefix.'audit.index', $syncRunId)->with('success', 'Audit rules saved.');
     }
 
     public function run(Request $request, $syncRunId)
@@ -119,7 +119,9 @@ class AuditController extends Controller
 
         $checks = [];
         foreach ($config as $column => $rules) {
-            if (empty($rules)) continue;
+            if (empty($rules)) {
+                continue;
+            }
 
             $checks[$column] = function ($ruleBuilder) use ($rules) {
                 foreach ($rules as $ruleConfig) {
@@ -143,7 +145,8 @@ class AuditController extends Controller
         $audit->run();
 
         $routePrefix = config('extract-data.route_name_prefix', 'andach-leat.');
-        return redirect()->route($routePrefix . 'audit.index', $syncRunId)->with('success', 'Audit completed.');
+
+        return redirect()->route($routePrefix.'audit.index', $syncRunId)->with('success', 'Audit completed.');
     }
 
     public function storeCorrections(Request $request, $syncRunId)
@@ -177,18 +180,19 @@ class AuditController extends Controller
 
         $auditRun = AuditRun::where('table_name', $tableName)->latest()->first();
 
-        if (!$auditRun) {
+        if (! $auditRun) {
             return back()->with('error', 'No audit run found. Cannot determine identifier.');
         }
 
         $identifier = $auditRun->identifier_column;
-        $destinationTable = $tableName . '_reconciled';
+        $destinationTable = $tableName.'_reconciled';
 
         try {
             $rowsAffected = ExtractAndTransform::reconcile($tableName, $destinationTable, $identifier);
+
             return back()->with('success', "Reconciliation complete. {$rowsAffected} rows updated in '{$destinationTable}'.");
         } catch (\Exception $e) {
-            return back()->with('error', 'Reconciliation failed: ' . $e->getMessage());
+            return back()->with('error', 'Reconciliation failed: '.$e->getMessage());
         }
     }
 }
