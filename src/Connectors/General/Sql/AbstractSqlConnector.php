@@ -158,7 +158,7 @@ abstract class AbstractSqlConnector extends BaseConnector
         if (! Config::has("database.connections.{$name}")) {
             Config::set("database.connections.{$name}", $this->toLaravelConnectionConfig($config));
         }
-        DB::purge($name);
+        // DB::purge($name); // This was causing a new connection on every call. Removing it allows connection reuse.
 
         return $name;
     }
