@@ -70,11 +70,11 @@
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <a href="{{ $dataset->configureUrl }}" class="text-indigo-600 hover:text-indigo-900 mr-4">Configure</a>
 
-                            <form action="{{ $dataset->storeUrl }}" method="POST" class="inline">
-                                @csrf
-                                <input type="hidden" name="dataset" value="{{ $dataset->getIdentifier() }}">
-                                <button type="submit" class="text-gray-600 hover:text-gray-900">Quick Sync</button>
-                            </form>
+                            <button type="button"
+                                    onclick="submitSync('{{ $dataset->storeUrl }}', '{{ $dataset->getIdentifier() }}')"
+                                    class="text-gray-600 hover:text-gray-900 bg-transparent border-0 cursor-pointer underline">
+                                Quick Sync
+                            </button>
                         </td>
                     </tr>
                 @empty
@@ -85,4 +85,19 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Hidden form for Quick Sync -->
+    <form id="sync-form" method="POST" style="display: none;">
+        @csrf
+        <input type="hidden" name="dataset" id="sync-dataset-input">
+    </form>
+
+    <script>
+        function submitSync(url, dataset) {
+            const form = document.getElementById('sync-form');
+            form.action = url;
+            document.getElementById('sync-dataset-input').value = dataset;
+            form.submit();
+        }
+    </script>
 @endsection

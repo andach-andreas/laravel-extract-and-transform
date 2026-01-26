@@ -34,7 +34,15 @@ class TableManager
         $datasetName = Str::slug(pathinfo($profile->dataset_identifier, PATHINFO_FILENAME), '_');
         $versionNumber = 'v'.$version->version_number;
 
-        return "{$prefix}{$sourceType}_{$sourceName}_{$datasetName}_{$versionNumber}";
+        // Ensure table name isn't too long (MySQL limit is 64 chars)
+        // We truncate parts if necessary, prioritizing uniqueness
+        $base = "{$prefix}{$sourceType}_{$sourceName}_{$datasetName}";
+        if (strlen($base) + strlen($versionNumber) + 1 > 64) {
+            $limit = 64 - strlen($versionNumber) - 1;
+            $base = substr($base, 0, $limit);
+        }
+
+        return "{$base}_{$versionNumber}";
     }
 
     private function createTable(string $tableName, SyncProfile $profile, SchemaVersion $version): void
@@ -42,10 +50,16 @@ class TableManager
         $mapping = $version->column_mapping ?? [];
         $overrides = $version->schema_overrides ?? [];
 
-        Schema::create($tableName, function (Blueprint $table) use ($profile, $mapping, $overrides) {
+        Schema::create($tableName, function (Blueprint $table) use ($profile, $mapping, $overrides, $tableName) {
             $table->id('__id');
-            $table->string('__source_id')->nullable()->index();
-            $table->string('__content_hash')->nullable()->index();
+
+            // Limit length to 191 to be safe with utf8mb4 on older MySQL/MariaDB
+            // Use custom index name to avoid "Identifier name too long" errors
+            $table->string('__source_id', 191)->nullable()->index(substr($tableName, 0, 20) . '_sid_idx');
+
+            // SHA-256 is 64 chars
+            $table->string('__content_hash', 64)->nullable()->index(substr($tableName, 0, 20) . '_ch_idx');
+
             $table->boolean('__is_deleted')->default(false);
             $table->timestamp('__last_synced_at')->useCurrent();
 
@@ -56,21 +70,16 @@ class TableManager
             foreach ($schema->fields as $field) {
                 $sourceName = $field->name;
 
-                // If a mapping is provided, it acts as an allowlist.
                 if (! empty($mapping)) {
                     if (array_key_exists($sourceName, $mapping)) {
                         $localName = $mapping[$sourceName];
-
-                        // Explicitly excluded
                         if ($localName === null) {
                             continue;
                         }
                     } else {
-                        // Not in mapping, so exclude it
                         continue;
                     }
                 } else {
-                    // No mapping provided, include everything 1:1
                     $localName = $sourceName;
                 }
 
@@ -97,9 +106,7 @@ class TableManager
                 if (! empty($mapping)) {
                     if (array_key_exists($sourceName, $mapping)) {
                         $localName = $mapping[$sourceName];
-                        if ($localName === null) {
-                            continue;
-                        }
+                        if ($localName === null) continue;
                     } else {
                         continue;
                     }
@@ -147,6 +154,7 @@ class TableManager
                     [, $precision, $scale] = explode(':', $type) + [null, 18, 6];
                     $column = $table->decimal($name, (int) $precision, (int) $scale);
                 } else {
+                    // Default string length 255 is fine for data columns as they are not indexed by default here
                     $column = $table->string($name);
                 }
                 break;
