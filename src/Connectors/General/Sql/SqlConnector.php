@@ -62,21 +62,23 @@ class SqlConnector extends BaseConnector
         $out = [];
 
         if ($driver === 'mysql') {
-            // Explicitly query information_schema to ensure we only get tables for the target database
-            $tables = $connection->select('SELECT table_name as name FROM information_schema.tables WHERE table_schema = ?', [$database]);
+            // Use SHOW TABLES for performance. It's typically faster than querying information_schema.
+            $tables = $connection->select("SHOW TABLES FROM `{$database}`");
+            // The result key is dynamic, e.g., "Tables_in_your_db". We get the first value of the object.
+            foreach ($tables as $table) {
+                $tableArray = (array) $table;
+                $name = reset($tableArray); // Get the first value
+                $out[] = new RemoteDataset(identifier: $name, label: $name, meta: []);
+            }
         } else {
             // Fallback for other drivers
             $tables = $connection->getSchemaBuilder()->getTables();
-        }
-
-        foreach ($tables as $t) {
-            $t = (array) $t;
-            $name = (string) ($t['name'] ?? ($t['table_name'] ?? ''));
-
-            if ($name === '') {
-                continue;
+            foreach ($tables as $t) {
+                $t = (array) $t;
+                $name = (string) ($t['name'] ?? ($t['table_name'] ?? ''));
+                if ($name === '') continue;
+                $out[] = new RemoteDataset(identifier: $name, label: $name, meta: []);
             }
-            $out[] = new RemoteDataset(identifier: $name, label: $name, meta: []);
         }
 
         return $out;
