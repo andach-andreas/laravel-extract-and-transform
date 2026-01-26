@@ -76,7 +76,9 @@ class SqlConnector extends BaseConnector
             foreach ($tables as $t) {
                 $t = (array) $t;
                 $name = (string) ($t['name'] ?? ($t['table_name'] ?? ''));
-                if ($name === '') continue;
+                if ($name === '') {
+                    continue;
+                }
                 $out[] = new RemoteDataset(identifier: $name, label: $name, meta: []);
             }
         }
