@@ -5,6 +5,7 @@ namespace Andach\ExtractAndTransform\Connectors\General\Sql;
 use Andach\ExtractAndTransform\Connectors\BaseConnector;
 use Andach\ExtractAndTransform\Connectors\ConnectorConfigDefinition;
 use Andach\ExtractAndTransform\Data\RemoteDataset;
+use Andach\ExtractAndTransform\Data\RemoteField;
 use Andach\ExtractAndTransform\Data\RemoteSchema;
 use Andach\ExtractAndTransform\Services\RetryService;
 use Illuminate\Support\Facades\Config;
@@ -39,7 +40,7 @@ abstract class AbstractSqlConnector extends BaseConnector
     {
         $this->retryService->run(function () use ($config) {
             $conn = $this->resolveConnectionName($config);
-            DB::connection($conn)->reconnect();
+            // Removed reconnect() to allow connection reuse if already established
             DB::connection($conn)->select('select 1');
         });
     }
@@ -153,11 +154,15 @@ abstract class AbstractSqlConnector extends BaseConnector
         if (! is_string($driver) || $driver === '') {
             throw new \InvalidArgumentException('SQL source config must include either {"connection": "..."} or DSN keys.');
         }
+
+        // Ensure config is sorted for consistent hash generation
+        ksort($config);
         $name = 'extract_sql_'.substr(hash('sha256', json_encode($config) ?: ''), 0, 16);
+
         if (! Config::has("database.connections.{$name}")) {
             Config::set("database.connections.{$name}", $this->toLaravelConnectionConfig($config));
         }
-        // DB::purge($name); // This was causing a new connection on every call. Removing it allows connection reuse.
+        // DB::purge($name); // This was removed, allowing connection reuse.
 
         return $name;
     }

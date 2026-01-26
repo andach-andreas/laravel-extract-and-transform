@@ -25,17 +25,15 @@ class MySqlConnector extends AbstractSqlConnector
         $connection = DB::connection($conn);
         $database = $config['database'] ?? $connection->getDatabaseName();
 
-        $out = [];
-
         // Use SHOW TABLES for performance. It's typically faster than querying information_schema.
         $tables = $connection->select("SHOW TABLES FROM `{$database}`");
 
-        foreach ($tables as $table) {
-            // The result key is dynamic, e.g., "Tables_in_your_db". We get the first value of the object.
+        // Map the results to RemoteDataset objects
+        $out = array_map(function ($table) {
             $tableArray = (array) $table;
             $name = reset($tableArray);
-            $out[] = new RemoteDataset(identifier: $name, label: $name, meta: []);
-        }
+            return new RemoteDataset(identifier: $name, label: $name, meta: []);
+        }, $tables);
 
         return $out;
     }
