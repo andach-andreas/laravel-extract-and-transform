@@ -5,7 +5,6 @@ namespace Andach\ExtractAndTransform\Connectors\General\Sql;
 use Andach\ExtractAndTransform\Connectors\BaseConnector;
 use Andach\ExtractAndTransform\Connectors\ConnectorConfigDefinition;
 use Andach\ExtractAndTransform\Data\RemoteDataset;
-use Andach\ExtractAndTransform\Data\RemoteField;
 use Andach\ExtractAndTransform\Data\RemoteSchema;
 use Andach\ExtractAndTransform\Services\RetryService;
 use Illuminate\Support\Facades\Config;
