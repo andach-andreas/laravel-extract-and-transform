@@ -38,7 +38,7 @@
                 @forelse($datasets as $dataset)
                     @php
                         $profile = $profiles[$dataset->getIdentifier()] ?? null;
-                        $lastRun = $profile ? $profile->runs()->latest()->first() : null;
+                        $lastRun = $profile ? $profile->latestRun : null; // Use latestRun relationship
                     @endphp
                     <tr>
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">

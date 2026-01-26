@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 final class SyncProfile extends Model
 {
@@ -35,6 +36,11 @@ final class SyncProfile extends Model
     public function runs(): HasMany
     {
         return $this->hasMany(SyncRun::class);
+    }
+
+    public function latestRun(): HasOne
+    {
+        return $this->hasOne(SyncRun::class)->latestOfMany();
     }
 
     public function schemaVersions(): HasMany
