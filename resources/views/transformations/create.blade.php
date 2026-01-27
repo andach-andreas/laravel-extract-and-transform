@@ -11,6 +11,7 @@
             sourceTable: '',
             destTable: '',
             columns: [],
+            filters: [],
             sourceColumns: [],
             lookupColumns: {},
 
@@ -32,11 +33,18 @@
             removeColumn(index) {
                 this.columns.splice(index, 1);
             },
+            addFilter() {
+                this.filters.push({ column: '', operator: '=', value: '' });
+            },
+            removeFilter(index) {
+                this.filters.splice(index, 1);
+            },
             generateJson() {
                 let config = {
                     source: this.sourceTable,
                     destination: this.destTable,
-                    columns: {}
+                    columns: {},
+                    filters: this.filters
                 };
 
                 this.columns.forEach(col => {
@@ -102,6 +110,62 @@
                 <div>
                     <label for="dest_table" class="block text-sm font-medium text-gray-700">Destination Table</label>
                     <input type="text" x-model="destTable" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border">
+                </div>
+            </div>
+
+            <!-- Filters Section -->
+            <div class="border-t pt-4 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900">Filters</h3>
+                    <button type="button" @click="addFilter()" class="text-sm text-indigo-600 hover:text-indigo-900 font-medium">
+                        + Add Filter
+                    </button>
+                </div>
+
+                <div class="space-y-4">
+                    <template x-for="(filter, index) in filters" :key="index">
+                        <div class="flex items-start space-x-3 bg-gray-50 p-3 rounded border">
+                            <div class="w-1/3">
+                                <label class="block text-xs font-medium text-gray-500">Column</label>
+                                <select x-model="filter.column" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1 border">
+                                    <option value="">Select Column</option>
+                                    <template x-for="sc in sourceColumns" :key="sc">
+                                        <option :value="sc" x-text="sc"></option>
+                                    </template>
+                                </select>
+                            </div>
+                            <div class="w-1/4">
+                                <label class="block text-xs font-medium text-gray-500">Operator</label>
+                                <select x-model="filter.operator" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1 border">
+                                    <option value="=">=</option>
+                                    <option value="!=">!=</option>
+                                    <option value=">">&gt;</option>
+                                    <option value="<">&lt;</option>
+                                    <option value=">=">&gt;=</option>
+                                    <option value="<=">&lt;=</option>
+                                    <option value="LIKE">LIKE</option>
+                                    <option value="NOT LIKE">NOT LIKE</option>
+                                    <option value="STARTS WITH">STARTS WITH</option>
+                                    <option value="ENDS WITH">ENDS WITH</option>
+                                    <option value="CONTAINS">CONTAINS</option>
+                                    <option value="IN">IN</option>
+                                    <option value="NOT IN">NOT IN</option>
+                                    <option value="NULL">IS NULL</option>
+                                    <option value="NOT NULL">IS NOT NULL</option>
+                                </select>
+                            </div>
+                            <div class="flex-1" x-show="!['NULL', 'NOT NULL'].includes(filter.operator)">
+                                <label class="block text-xs font-medium text-gray-500">Value</label>
+                                <input type="text" x-model="filter.value" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-1 border">
+                            </div>
+                            <button type="button" @click="removeFilter(index)" class="text-red-600 hover:text-red-900 mt-6">
+                                &times;
+                            </button>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="filters.length === 0" class="text-center py-4 text-gray-500 italic text-sm">
+                    No filters applied.
                 </div>
             </div>
 

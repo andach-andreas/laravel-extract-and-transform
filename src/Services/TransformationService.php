@@ -7,6 +7,7 @@ use Andach\ExtractAndTransform\Models\TransformationRun;
 use Andach\ExtractAndTransform\Transform\Expr;
 use Andach\ExtractAndTransform\Transform\Expression;
 use Andach\ExtractAndTransform\Transform\ExpressionFactory;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
@@ -21,9 +22,10 @@ class TransformationService
         ]);
 
         try {
+            $config = $transformation->configuration;
+
             // Hydrate configuration if selects are empty
             if (empty($selects)) {
-                $config = $transformation->configuration;
                 // Support both 'columns' (new GUI) and 'selects' (legacy/manual) keys
                 $columns = $config['columns'] ?? $config['selects'] ?? [];
 
@@ -33,7 +35,7 @@ class TransformationService
             }
 
             if (empty($selects)) {
-                throw new \Exception('No columns defined for transformation.');
+                throw new \Exception("No columns defined for transformation.");
             }
 
             // 1. Determine Destination Table Name
@@ -51,6 +53,11 @@ class TransformationService
 
             // 2. Build the Select Query
             $query = DB::table($transformation->source_table);
+
+            // Apply Filters
+            if (isset($config['filters']) && is_array($config['filters'])) {
+                $this->applyFilters($query, $config['filters']);
+            }
 
             $selectSqls = [];
             foreach ($selects as $alias => $expr) {
@@ -129,6 +136,11 @@ class TransformationService
 
         $query = DB::table($sourceTable);
 
+        // Apply Filters
+        if (isset($config['filters']) && is_array($config['filters'])) {
+            $this->applyFilters($query, $config['filters']);
+        }
+
         $selectSqls = [];
         foreach ($selects as $alias => $expr) {
             if (! $expr instanceof Expression) {
@@ -146,6 +158,49 @@ class TransformationService
         }
 
         return $query->limit($limit)->get()->map(fn ($row) => (array) $row)->toArray();
+    }
+
+    private function applyFilters(Builder $query, array $filters): void
+    {
+        foreach ($filters as $filter) {
+            $column = $filter['column'];
+            $operator = $filter['operator'];
+            $value = $filter['value'] ?? null;
+
+            switch ($operator) {
+                case 'NULL':
+                    $query->whereNull($column);
+                    break;
+                case 'NOT NULL':
+                    $query->whereNotNull($column);
+                    break;
+                case 'IN':
+                    $values = is_array($value) ? $value : array_map('trim', explode(',', $value));
+                    $query->whereIn($column, $values);
+                    break;
+                case 'NOT IN':
+                    $values = is_array($value) ? $value : array_map('trim', explode(',', $value));
+                    $query->whereNotIn($column, $values);
+                    break;
+                case 'LIKE':
+                case 'NOT LIKE':
+                    $query->where($column, $operator, $value);
+                    break;
+                case 'STARTS WITH':
+                    $query->where($column, 'LIKE', $value . '%');
+                    break;
+                case 'ENDS WITH':
+                    $query->where($column, 'LIKE', '%' . $value);
+                    break;
+                case 'CONTAINS':
+                    $query->where($column, 'LIKE', '%' . $value . '%');
+                    break;
+                default:
+                    // Standard operators: =, !=, >, <, >=, <=
+                    $query->where($column, $operator, $value);
+                    break;
+            }
+        }
     }
 
     private function unwrapRaw($value)
