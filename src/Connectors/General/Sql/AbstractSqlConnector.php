@@ -10,7 +10,7 @@ use Andach\ExtractAndTransform\Data\RemoteSchema;
 use Andach\ExtractAndTransform\Services\RetryService;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log; // Added Log facade
+use Illuminate\Support\Facades\Log;
 
 abstract class AbstractSqlConnector extends BaseConnector
 {
@@ -34,6 +34,8 @@ abstract class AbstractSqlConnector extends BaseConnector
             new ConnectorConfigDefinition(key: 'database', label: 'Database', type: 'text', required: true),
             new ConnectorConfigDefinition(key: 'username', label: 'Username', type: 'text', required: false),
             new ConnectorConfigDefinition(key: 'password', type: 'password', label: 'Password', required: false),
+            new ConnectorConfigDefinition(key: 'primary_key', label: 'Primary Key (for chunking)', type: 'text', required: false, help: 'Defaults to "id". Used for efficient chunking of large datasets.'),
+            new ConnectorConfigDefinition(key: 'chunk_size', label: 'Chunk Size', type: 'number', required: false, help: 'Number of rows to fetch per query. Default: 10000.'),
         ];
     }
 
@@ -59,8 +61,52 @@ abstract class AbstractSqlConnector extends BaseConnector
     {
         $conn = $this->resolveConnectionName($config);
         $table = $dataset->identifier;
-        foreach (DB::connection($conn)->table($table)->cursor() as $row) {
-            yield (array) $row;
+
+        $primaryKey = $config['primary_key'] ?? 'id';
+        $chunkSize = (int) ($config['chunk_size'] ?? 10000);
+
+        // Check if the primary key exists to use efficient keyset pagination
+        $hasPrimaryKey = DB::connection($conn)->getSchemaBuilder()->hasColumn($table, $primaryKey);
+
+        if ($hasPrimaryKey) {
+            Log::info("[SQL Connector] Streaming rows from '{$table}' using keyset pagination on '{$primaryKey}' (Chunk: {$chunkSize}).");
+
+            $lastId = null;
+
+            while (true) {
+                $query = DB::connection($conn)->table($table)
+                    ->orderBy($primaryKey)
+                    ->limit($chunkSize);
+
+                if ($lastId !== null) {
+                    $query->where($primaryKey, '>', $lastId);
+                }
+
+                $rows = $query->get();
+
+                if ($rows->isEmpty()) {
+                    break;
+                }
+
+                foreach ($rows as $row) {
+                    $rowArray = (array) $row;
+                    $lastId = $rowArray[$primaryKey]; // Update lastId for next iteration
+                    yield $rowArray;
+                }
+
+                // If we fetched fewer than chunk size, we are done
+                if ($rows->count() < $chunkSize) {
+                    break;
+                }
+
+                // Optional: Clear memory if needed, though 'yield' helps.
+                unset($rows);
+            }
+        } else {
+            Log::warning("[SQL Connector] Primary key '{$primaryKey}' not found in '{$table}'. Falling back to standard cursor (slower for large datasets).");
+            foreach (DB::connection($conn)->table($table)->cursor() as $row) {
+                yield (array) $row;
+            }
         }
     }
 
@@ -99,13 +145,10 @@ abstract class AbstractSqlConnector extends BaseConnector
 
     protected function streamFullRefresh(RemoteDataset $dataset, array $config): \Generator
     {
-        $conn = $this->resolveConnectionName($config);
-        $table = $dataset->identifier;
-        foreach (DB::connection($conn)->table($table)->cursor() as $row) {
-            yield (array) $row;
+        // Reuse the efficient streamRows implementation
+        foreach ($this->streamRows($dataset, $config) as $row) {
+            yield $row;
         }
-
-        return null;
     }
 
     protected function streamByWatermark(RemoteDataset $dataset, array $config, ?array $checkpoint, array $options): \Generator
@@ -172,7 +215,6 @@ abstract class AbstractSqlConnector extends BaseConnector
             Log::info("[SQL Connector] Reusing existing dynamic connection config for '{$name}'.");
         }
 
-        // DB::purge($name); // This was removed, allowing connection reuse.
         Log::info("[SQL Connector] Resolved connection '{$name}' in " . round(microtime(true) - $startTime, 3) . "s.");
         return $name;
     }
