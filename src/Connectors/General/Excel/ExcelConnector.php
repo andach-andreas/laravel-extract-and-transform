@@ -4,15 +4,12 @@ namespace Andach\ExtractAndTransform\Connectors\General\Excel;
 
 use Andach\ExtractAndTransform\Connectors\BaseConnector;
 use Andach\ExtractAndTransform\Connectors\ConnectorConfigDefinition;
-use Andach\ExtractAndTransform\Connectors\Contracts\CanInferSchema;
-use Andach\ExtractAndTransform\Connectors\Contracts\CanStreamRows;
 use Andach\ExtractAndTransform\Data\RemoteDataset;
 use Andach\ExtractAndTransform\Data\RemoteField;
 use Andach\ExtractAndTransform\Data\RemoteSchema;
-use Illuminate\Support\Facades\Storage;
-use OpenSpout\Reader\XLSX\Reader;
+use OpenSpout\Reader\Common\Creator\ReaderEntityFactory;
 
-class ExcelConnector extends BaseConnector implements CanInferSchema, CanStreamRows
+class ExcelConnector extends BaseConnector
 {
     public function key(): string
     {
@@ -21,151 +18,105 @@ class ExcelConnector extends BaseConnector implements CanInferSchema, CanStreamR
 
     public function label(): string
     {
-        return 'Excel (XLSX)';
+        return 'Excel (XLSX/ODS)';
     }
 
     public function getConfigDefinition(): array
     {
         return [
-            new ConnectorConfigDefinition(key: 'path', label: 'File Path', required: true),
-            new ConnectorConfigDefinition(key: 'disk', label: 'Storage Disk', required: false),
+            new ConnectorConfigDefinition(key: 'path', label: 'File Path', type: 'text', required: true, help: 'Absolute path to the Excel file.'),
         ];
     }
 
     public function test(array $config): void
     {
-        // getPath now performs the existence check
-        $this->getPath($config);
+        $path = $config['path'] ?? '';
+        if (! file_exists($path)) {
+            throw new \RuntimeException("File not found at path: {$path}");
+        }
     }
 
-    public function datasets(array $config): iterable
+    public function datasets(array $config): array
     {
-        $path = $this->getPath($config);
-        $reader = new Reader;
+        $path = $config['path'] ?? '';
+        $reader = ReaderEntityFactory::createReaderFromFile($path);
         $reader->open($path);
 
+        $datasets = [];
         foreach ($reader->getSheetIterator() as $sheet) {
-            yield new RemoteDataset(
-                identifier: $sheet->getName(),
-                label: $sheet->getName(),
-                meta: ['sheet_index' => $sheet->getIndex()]
-            );
+            $datasets[] = new RemoteDataset(identifier: $sheet->getName(), label: $sheet->getName(), meta: ['index' => $sheet->getIndex()]);
         }
+        $reader->close();
 
+        return $datasets;
+    }
+
+    public function streamRows(RemoteDataset $dataset, array $config, array $options = []): iterable
+    {
+        $path = $config['path'] ?? '';
+        $reader = ReaderEntityFactory::createReaderFromFile($path);
+        $reader->open($path);
+
+        $sheetIndex = $dataset->meta['index'] ?? 0;
+        $header = [];
+
+        foreach ($reader->getSheetIterator() as $sheet) {
+            if ($sheet->getIndex() !== $sheetIndex) {
+                continue;
+            }
+
+            foreach ($sheet->getRowIterator() as $rowIndex => $row) {
+                $cells = $row->toArray();
+                if ($rowIndex === 1) {
+                    $header = $cells;
+                    continue;
+                }
+
+                $assocRow = [];
+                foreach ($header as $i => $colName) {
+                    $assocRow[$colName] = $cells[$i] ?? null;
+                }
+                yield $assocRow;
+            }
+        }
         $reader->close();
     }
 
     public function inferSchema(RemoteDataset $dataset, array $config): RemoteSchema
     {
-        $path = $this->getPath($config);
-        $reader = new Reader;
+        $path = $config['path'] ?? '';
+        $reader = ReaderEntityFactory::createReaderFromFile($path);
         $reader->open($path);
 
-        $header = [];
-        $firstRow = [];
+        $sheetIndex = $dataset->meta['index'] ?? 0;
+        $fields = [];
 
         foreach ($reader->getSheetIterator() as $sheet) {
-            if ($sheet->getName() === $dataset->identifier) {
-                foreach ($sheet->getRowIterator() as $row) {
-                    $cells = $row->toArray();
-                    if (empty($header)) {
-                        $header = $cells;
-                    } else {
-                        $firstRow = $cells;
-                        break; // We have header and first row
-                    }
-                }
-                break;
+            if ($sheet->getIndex() !== $sheetIndex) {
+                continue;
             }
+
+            $header = [];
+            $firstRow = [];
+
+            foreach ($sheet->getRowIterator() as $rowIndex => $row) {
+                if ($rowIndex === 1) {
+                    $header = $row->toArray();
+                } elseif ($rowIndex === 2) {
+                    $firstRow = $row->toArray();
+                    break; // Only need first data row
+                }
+            }
+
+            foreach ($header as $i => $colName) {
+                $val = $firstRow[$i] ?? null;
+                $type = is_numeric($val) ? (str_contains((string)$val, '.') ? 'float' : 'int') : 'string';
+                $fields[] = new RemoteField(name: (string)$colName, remoteType: 'string', nullable: true, suggestedLocalType: $type);
+            }
+            break;
         }
         $reader->close();
-
-        if (empty($header)) {
-            throw new \RuntimeException("Sheet '{$dataset->identifier}' is empty.");
-        }
-
-        $fields = [];
-        foreach ($header as $index => $colName) {
-            $val = $firstRow[$index] ?? null;
-            $fields[] = new RemoteField(
-                name: (string) $colName,
-                remoteType: gettype($val),
-                suggestedLocalType: $this->guessType($val),
-                nullable: true
-            );
-        }
 
         return new RemoteSchema($fields);
-    }
-
-    public function streamRows(RemoteDataset $dataset, array $config): iterable
-    {
-        $path = $this->getPath($config);
-        $reader = new Reader;
-        $reader->open($path);
-
-        foreach ($reader->getSheetIterator() as $sheet) {
-            if ($sheet->getName() === $dataset->identifier) {
-                $header = [];
-                foreach ($sheet->getRowIterator() as $row) {
-                    $cells = $row->toArray();
-                    if (empty($header)) {
-                        $header = array_map('strval', $cells);
-
-                        continue;
-                    }
-
-                    // Combine header with values
-                    $assoc = [];
-                    foreach ($header as $i => $key) {
-                        $assoc[$key] = $cells[$i] ?? null;
-                    }
-                    yield $assoc;
-                }
-                break;
-            }
-        }
-
-        $reader->close();
-    }
-
-    private function getPath(array $config): string
-    {
-        $path = $config['path'] ?? null;
-
-        if (empty($path)) {
-            throw new \RuntimeException("Configuration is missing the required 'path' key.");
-        }
-
-        $disk = $config['disk'] ?? null;
-
-        if ($disk) {
-            if (! Storage::disk($disk)->exists($path)) {
-                throw new \RuntimeException("File not found on disk '{$disk}': {$path}");
-            }
-
-            return Storage::disk($disk)->path($path);
-        }
-
-        if (! file_exists($path)) {
-            throw new \RuntimeException("File not found at path: {$path}");
-        }
-
-        return $path;
-    }
-
-    private function guessType(mixed $val): string
-    {
-        if (is_int($val)) {
-            return 'integer';
-        }
-        if (is_float($val)) {
-            return 'decimal:18,4';
-        }
-        if ($val instanceof \DateTimeInterface) {
-            return 'datetime';
-        }
-
-        return 'string';
     }
 }

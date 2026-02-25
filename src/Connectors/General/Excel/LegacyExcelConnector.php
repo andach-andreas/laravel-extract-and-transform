@@ -4,158 +4,86 @@ namespace Andach\ExtractAndTransform\Connectors\General\Excel;
 
 use Andach\ExtractAndTransform\Connectors\BaseConnector;
 use Andach\ExtractAndTransform\Connectors\ConnectorConfigDefinition;
-use Andach\ExtractAndTransform\Connectors\Contracts\CanInferSchema;
-use Andach\ExtractAndTransform\Connectors\Contracts\CanStreamRows;
 use Andach\ExtractAndTransform\Data\RemoteDataset;
 use Andach\ExtractAndTransform\Data\RemoteField;
 use Andach\ExtractAndTransform\Data\RemoteSchema;
-use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Reader\Xls;
 
-class LegacyExcelConnector extends BaseConnector implements CanInferSchema, CanStreamRows
+class LegacyExcelConnector extends BaseConnector
 {
     public function key(): string
     {
-        return 'excel_legacy';
+        return 'excel-legacy';
     }
 
     public function label(): string
     {
-        return 'Legacy Excel (XLS)';
+        return 'Excel (XLS/Legacy)';
     }
 
     public function getConfigDefinition(): array
     {
         return [
-            new ConnectorConfigDefinition(key: 'path', label: 'File Path', required: true),
-            new ConnectorConfigDefinition(key: 'disk', label: 'Storage Disk', required: false),
+            new ConnectorConfigDefinition(key: 'path', label: 'File Path', type: 'text', required: true, help: 'Absolute path to the XLS file.'),
         ];
     }
 
     public function test(array $config): void
     {
-        // getPath now performs the existence check
-        $this->getPath($config);
+        $path = $config['path'] ?? '';
+        if (! file_exists($path)) {
+            throw new \RuntimeException("File not found at path: {$path}");
+        }
     }
 
-    public function datasets(array $config): iterable
+    public function datasets(array $config): array
     {
-        $path = $this->getPath($config);
+        $path = $config['path'] ?? '';
+        $spreadsheet = IOFactory::load($path);
 
-        // Use IOFactory to identify, but force XLS reader logic if needed
-        $reader = new Xls;
-        $reader->setReadDataOnly(true);
-        $spreadsheet = $reader->load($path);
-
+        $datasets = [];
         foreach ($spreadsheet->getSheetNames() as $index => $name) {
-            yield new RemoteDataset(
-                identifier: $name,
-                label: $name,
-                meta: ['sheet_index' => $index]
-            );
+            $datasets[] = new RemoteDataset(identifier: $name, label: $name, meta: ['index' => $index]);
+        }
+
+        return $datasets;
+    }
+
+    public function streamRows(RemoteDataset $dataset, array $config, array $options = []): iterable
+    {
+        $path = $config['path'] ?? '';
+        $spreadsheet = IOFactory::load($path);
+        $sheet = $spreadsheet->getSheet($dataset->meta['index'] ?? 0);
+
+        $rows = $sheet->toArray();
+        $header = array_shift($rows); // Remove header
+
+        foreach ($rows as $row) {
+            $assocRow = [];
+            foreach ($header as $i => $colName) {
+                $assocRow[$colName] = $row[$i] ?? null;
+            }
+            yield $assocRow;
         }
     }
 
     public function inferSchema(RemoteDataset $dataset, array $config): RemoteSchema
     {
-        $path = $this->getPath($config);
-        $reader = new Xls;
-        $reader->setReadDataOnly(true);
-        // Load only the specific sheet to save memory
-        $reader->setLoadSheetsOnly($dataset->identifier);
-        $spreadsheet = $reader->load($path);
+        $path = $config['path'] ?? '';
+        $spreadsheet = IOFactory::load($path);
+        $sheet = $spreadsheet->getSheet($dataset->meta['index'] ?? 0);
 
-        $sheet = $spreadsheet->getActiveSheet();
         $rows = $sheet->toArray();
-
-        if (empty($rows)) {
-            throw new \RuntimeException("Sheet '{$dataset->identifier}' is empty.");
-        }
-
-        $header = $rows[0];
+        $header = $rows[0] ?? [];
         $firstRow = $rows[1] ?? [];
 
         $fields = [];
-        foreach ($header as $index => $colName) {
-            $val = $firstRow[$index] ?? null;
-            $fields[] = new RemoteField(
-                name: (string) $colName,
-                remoteType: gettype($val),
-                suggestedLocalType: $this->guessType($val),
-                nullable: true
-            );
+        foreach ($header as $i => $colName) {
+            $val = $firstRow[$i] ?? null;
+            $type = is_numeric($val) ? (str_contains((string)$val, '.') ? 'float' : 'int') : 'string';
+            $fields[] = new RemoteField(name: (string)$colName, remoteType: 'string', nullable: true, suggestedLocalType: $type);
         }
 
         return new RemoteSchema($fields);
-    }
-
-    public function streamRows(RemoteDataset $dataset, array $config): iterable
-    {
-        $path = $this->getPath($config);
-        $reader = new Xls;
-        $reader->setReadDataOnly(true);
-        $reader->setLoadSheetsOnly($dataset->identifier);
-        $spreadsheet = $reader->load($path);
-
-        $sheet = $spreadsheet->getActiveSheet();
-
-        // PhpSpreadsheet's toArray() loads everything into memory.
-        // For true streaming of XLS, we'd need a different approach, but XLS files are usually smaller (65k row limit).
-        // So loading into memory is acceptable for legacy support.
-
-        $rows = $sheet->toArray();
-        $header = array_shift($rows); // Remove header
-
-        if (! $header) {
-            return;
-        }
-
-        foreach ($rows as $row) {
-            $assoc = [];
-            foreach ($header as $i => $key) {
-                $assoc[$key] = $row[$i] ?? null;
-            }
-            yield $assoc;
-        }
-    }
-
-    private function getPath(array $config): string
-    {
-        $path = $config['path'] ?? null;
-
-        if (empty($path)) {
-            throw new \RuntimeException("Configuration is missing the required 'path' key.");
-        }
-
-        $disk = $config['disk'] ?? null;
-
-        if ($disk) {
-            if (! Storage::disk($disk)->exists($path)) {
-                throw new \RuntimeException("File not found on disk '{$disk}': {$path}");
-            }
-
-            return Storage::disk($disk)->path($path);
-        }
-
-        if (! file_exists($path)) {
-            throw new \RuntimeException("File not found at path: {$path}");
-        }
-
-        return $path;
-    }
-
-    private function guessType(mixed $val): string
-    {
-        if (is_int($val)) {
-            return 'integer';
-        }
-        if (is_float($val)) {
-            return 'decimal:18,4';
-        }
-
-        // PhpSpreadsheet returns dates as floats (Excel timestamp) unless configured otherwise.
-        // We might need to handle that, but for now basic types.
-        return 'string';
     }
 }
