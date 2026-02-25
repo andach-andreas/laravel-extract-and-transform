@@ -39,7 +39,7 @@ class Dataset
         return $this->remoteDataset->meta;
     }
 
-    public function getRows(): iterable
+    public function getRows(array $options = []): iterable
     {
         $config = $this->config;
         if ($this->configUpdater) {
@@ -47,7 +47,7 @@ class Dataset
         }
 
         if ($this->connector instanceof CanStreamRows) {
-            return $this->connector->streamRows($this->remoteDataset, $config);
+            return $this->connector->streamRows($this->remoteDataset, $config, $options);
         }
 
         throw new \Exception('This connector does not support streaming rows.');

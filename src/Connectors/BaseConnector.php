@@ -27,7 +27,7 @@ abstract class BaseConnector implements CanInferSchema, CanListIdentities, CanSt
      * Contains the generic pagination loop for API-based connectors.
      * Connectors that do not use pagination (like CSV or SQL) should override this method.
      */
-    public function streamRows(RemoteDataset $dataset, array $config): iterable
+    public function streamRows(RemoteDataset $dataset, array $config, array $options = []): iterable
     {
         $parameters = $this->getInitialParameters($dataset, $config);
 

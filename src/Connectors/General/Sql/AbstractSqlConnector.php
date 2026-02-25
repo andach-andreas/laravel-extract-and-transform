@@ -34,8 +34,6 @@ abstract class AbstractSqlConnector extends BaseConnector
             new ConnectorConfigDefinition(key: 'database', label: 'Database', type: 'text', required: true),
             new ConnectorConfigDefinition(key: 'username', label: 'Username', type: 'text', required: false),
             new ConnectorConfigDefinition(key: 'password', type: 'password', label: 'Password', required: false),
-            new ConnectorConfigDefinition(key: 'primary_key', label: 'Primary Key (for chunking)', type: 'text', required: false, help: 'Defaults to "id". Used for efficient chunking of large datasets.'),
-            new ConnectorConfigDefinition(key: 'chunk_size', label: 'Chunk Size', type: 'number', required: false, help: 'Number of rows to fetch per query. Default: 10000.'),
         ];
     }
 
@@ -57,13 +55,14 @@ abstract class AbstractSqlConnector extends BaseConnector
         throw new \BadMethodCallException('The datasets method must be implemented by the concrete SQL connector.');
     }
 
-    public function streamRows(RemoteDataset $dataset, array $config): iterable
+    public function streamRows(RemoteDataset $dataset, array $config, array $options = []): iterable
     {
         $conn = $this->resolveConnectionName($config);
         $table = $dataset->identifier;
 
-        $primaryKey = $config['primary_key'] ?? 'id';
-        $chunkSize = (int) ($config['chunk_size'] ?? 10000);
+        // Use options for chunking, fallback to config, then default
+        $primaryKey = $options['primary_key'] ?? ($config['primary_key'] ?? 'id');
+        $chunkSize = (int) ($options['chunk_size'] ?? ($config['chunk_size'] ?? 10000));
 
         // Check if the primary key exists to use efficient keyset pagination
         $hasPrimaryKey = DB::connection($conn)->getSchemaBuilder()->hasColumn($table, $primaryKey);
@@ -121,7 +120,7 @@ abstract class AbstractSqlConnector extends BaseConnector
 
         return match ($strategy) {
             'time_watermark' => $this->streamByWatermark($dataset, $config, $checkpoint, $options),
-            default => $this->streamFullRefresh($dataset, $config),
+            default => $this->streamFullRefresh($dataset, $config, $options),
         };
     }
 
@@ -143,10 +142,10 @@ abstract class AbstractSqlConnector extends BaseConnector
         }
     }
 
-    protected function streamFullRefresh(RemoteDataset $dataset, array $config): \Generator
+    protected function streamFullRefresh(RemoteDataset $dataset, array $config, array $options = []): \Generator
     {
-        // Reuse the efficient streamRows implementation
-        foreach ($this->streamRows($dataset, $config) as $row) {
+        // Reuse the efficient streamRows implementation, passing options
+        foreach ($this->streamRows($dataset, $config, $options) as $row) {
             yield $row;
         }
     }

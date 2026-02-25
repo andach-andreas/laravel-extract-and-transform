@@ -18,6 +18,7 @@ final class FullRefreshStrategy implements SyncStrategy
         $activeVersion = $profile->activeSchemaVersion;
         $localTable = $activeVersion->local_table_name;
         $mapping = $activeVersion->column_mapping ?? null;
+        $config = $activeVersion->configuration ?? [];
 
         $dataset = $source->getDataset($profile->dataset_identifier);
         if (! $dataset) {
@@ -37,7 +38,8 @@ final class FullRefreshStrategy implements SyncStrategy
         $now = now()->toDateTimeString(); // Format explicitly to avoid JSON encoding of Carbon object
 
         $rowsToInsert = [];
-        foreach ($dataset->getRows() as $row) {
+        // Pass configuration options (like primary_key, chunk_size) to getRows
+        foreach ($dataset->getRows($config) as $row) {
             $transformedRow = $this->transformer->transform($row, $mapping);
 
             $normalizedRow = array_intersect_key($transformedRow, $expectedColumns);
