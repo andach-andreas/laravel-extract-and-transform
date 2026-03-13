@@ -32,7 +32,7 @@ class HubSpotConnectorTest extends TestCase
         ]);
 
         $dataset = new RemoteDataset('contacts', 'Contacts');
-        $config = ['api_key' => 'test-key'];
+        $config = ['access_token' => 'test-key'];
 
         // Act: Stream the rows
         $rows = iterator_to_array($this->connector->streamRows($dataset, $config));
@@ -49,7 +49,7 @@ class HubSpotConnectorTest extends TestCase
     {
         $definitions = $this->connector->getConfigDefinition();
         $this->assertCount(1, $definitions);
-        $this->assertEquals('api_key', $definitions[0]->key);
+        $this->assertEquals('access_token', $definitions[0]->key);
         $this->assertEquals('password', $definitions[0]->type);
     }
 }

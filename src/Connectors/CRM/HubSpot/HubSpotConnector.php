@@ -7,9 +7,12 @@ use Andach\ExtractAndTransform\Connectors\ConnectorConfigDefinition;
 use Andach\ExtractAndTransform\Data\RemoteDataset;
 use Andach\ExtractAndTransform\Data\RemoteField;
 use Andach\ExtractAndTransform\Data\RemoteSchema;
+use Illuminate\Support\Facades\Http;
 
 class HubSpotConnector extends BaseConnector
 {
+    private ?string $currentDatasetIdentifier = null;
+
     public function key(): string
     {
         return 'hubspot';
@@ -45,7 +48,7 @@ class HubSpotConnector extends BaseConnector
 
     public function streamRows(RemoteDataset $dataset, array $config, array $options = []): iterable
     {
-        // Stub implementation
+        $this->currentDatasetIdentifier = $dataset->identifier;
         return parent::streamRows($dataset, $config, $options);
     }
 
@@ -56,8 +59,12 @@ class HubSpotConnector extends BaseConnector
 
     protected function fetchPaginatedData(array $parameters, array $config): array
     {
-        // Mock API call
-        return [];
+        $url = "https://api.hubapi.com/crm/v3/objects/" . ($this->currentDatasetIdentifier ?? 'contacts');
+
+        $response = Http::withToken($config['access_token'])
+            ->get($url, $parameters);
+
+        return $response->json();
     }
 
     protected function extractRowsFromResponse(array $response): iterable
@@ -68,7 +75,8 @@ class HubSpotConnector extends BaseConnector
     protected function getNextPageParameters(array $response, array $previousParameters, array $config): ?array
     {
         if (isset($response['paging']['next']['after'])) {
-            return ['after' => $response['paging']['next']['after'], 'limit' => 100];
+            // Match the test expectation of parameter order (limit then after)
+            return ['limit' => 100, 'after' => $response['paging']['next']['after']];
         }
         return null;
     }

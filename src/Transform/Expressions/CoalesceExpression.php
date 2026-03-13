@@ -16,15 +16,20 @@ class CoalesceExpression implements Expression
         $this->expressions = $expressions;
     }
 
-    public function compile(Builder $query): string
+    public function compile(Builder $query): mixed
     {
-        $compiledParts = array_map(function (Expression $expr) use ($query) {
-            return $expr->compile($query);
+        $grammar = $query->getGrammar();
+        $compiledParts = array_map(function (Expression $expr) use ($query, $grammar) {
+            $compiled = $expr->compile($query);
+            if ($compiled instanceof \Illuminate\Database\Query\Expression) {
+                return $compiled->getValue($grammar);
+            }
+            return $compiled;
         }, $this->expressions);
 
         $sql = 'COALESCE(' . implode(', ', $compiledParts) . ')';
 
-        return DB::raw($sql)->getValue($query->getGrammar());
+        return DB::raw($sql);
     }
 
     public function toArray(): array

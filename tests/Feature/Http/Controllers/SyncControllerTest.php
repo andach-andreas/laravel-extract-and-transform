@@ -19,9 +19,9 @@ class SyncControllerTest extends TestCase
     {
         // Mock Connector
         $mockConnector = Mockery::mock(CsvConnector::class);
-        $mockConnector->shouldReceive('datasets')->andReturn(new \ArrayIterator([
+        $mockConnector->shouldReceive('datasets')->andReturn([
             new RemoteDataset('file.csv', 'File CSV'),
-        ]));
+        ]);
         $mockConnector->shouldReceive('key')->andReturn('csv');
         $mockConnector->shouldReceive('label')->andReturn('CSV');
         $mockConnector->shouldReceive('getConfigDefinition')->andReturn([]);
@@ -40,9 +40,9 @@ class SyncControllerTest extends TestCase
     {
         // Mock Connector
         $mockConnector = Mockery::mock(CsvConnector::class);
-        $mockConnector->shouldReceive('datasets')->andReturn(new \ArrayIterator([
+        $mockConnector->shouldReceive('datasets')->andReturn([
             new RemoteDataset('file.csv', 'File CSV'),
-        ]));
+        ]);
         $mockConnector->shouldReceive('inferSchema')->andReturn(new RemoteSchema([]));
         $mockConnector->shouldReceive('key')->andReturn('csv');
         $mockConnector->shouldReceive('label')->andReturn('CSV');
@@ -62,9 +62,9 @@ class SyncControllerTest extends TestCase
     {
         // Mock Connector
         $mockConnector = Mockery::mock(CsvConnector::class);
-        $mockConnector->shouldReceive('datasets')->andReturn(new \ArrayIterator([
+        $mockConnector->shouldReceive('datasets')->andReturn([
             new RemoteDataset('file.csv', 'File CSV'),
-        ]));
+        ]);
         $mockConnector->shouldReceive('inferSchema')->andReturn(new RemoteSchema([]));
         $mockConnector->shouldReceive('streamRows')->andReturn(new \ArrayIterator([]));
         $mockConnector->shouldReceive('key')->andReturn('csv');
@@ -93,7 +93,7 @@ class SyncControllerTest extends TestCase
     public function test_it_throws_error_for_invalid_dataset()
     {
         $mockConnector = Mockery::mock(CsvConnector::class);
-        $mockConnector->shouldReceive('datasets')->andReturn(new \ArrayIterator([])); // No datasets
+        $mockConnector->shouldReceive('datasets')->andReturn([]); // No datasets
         $mockConnector->shouldReceive('key')->andReturn('csv');
         $mockConnector->shouldReceive('label')->andReturn('CSV');
         $mockConnector->shouldReceive('getConfigDefinition')->andReturn([]);

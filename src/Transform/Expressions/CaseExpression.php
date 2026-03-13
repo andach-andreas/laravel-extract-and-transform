@@ -10,37 +10,57 @@ class CaseExpression implements Expression
 {
     private array $when;
     private Expression $then;
+    private ?Expression $else;
 
-    public function __construct(array $when, Expression $then)
+    public function __construct(array $when, Expression $then, ?Expression $else = null)
     {
         $this->when = $when;
         $this->then = $then;
+        $this->else = $else;
     }
 
-    public function compile(Builder $query): string
+    public function compile(Builder $query): mixed
     {
         $column = $this->when['column'];
         $operator = $this->when['operator'];
         $value = $this->when['value'];
 
         $thenSql = $this->then->compile($query);
+        if ($thenSql instanceof \Illuminate\Database\Query\Expression) {
+            $thenSql = $thenSql->getValue($query->getGrammar());
+        }
+
+        $elseSql = 'NULL';
+        if ($this->else) {
+            $elseSql = $this->else->compile($query);
+            if ($elseSql instanceof \Illuminate\Database\Query\Expression) {
+                $elseSql = $elseSql->getValue($query->getGrammar());
+            }
+        }
 
         $sql = "CASE WHEN ";
 
-        if ($operator === 'IN' || $operator === 'NOT IN') {
-            $placeholders = implode(',', array_fill(0, count($value), '?'));
-            $sql .= "`{$column}` {$operator} ({$placeholders})";
-            foreach ($value as $v) {
-                $query->addBinding($v, 'where');
+        if ($column instanceof Expression) {
+            $columnSql = $column->compile($query);
+            if ($columnSql instanceof \Illuminate\Database\Query\Expression) {
+                $columnSql = $columnSql->getValue($query->getGrammar());
             }
         } else {
-            $sql .= "`{$column}` {$operator} ?";
-            $query->addBinding($value, 'where');
+            $columnSql = "`{$column}`";
         }
 
-        $sql .= " THEN {$thenSql} ELSE NULL END";
+        if ($operator === 'IN' || $operator === 'NOT IN') {
+            $quotedValues = array_map(fn($v) => DB::getPdo()->quote($v), (array) $value);
+            $placeholders = implode(',', $quotedValues);
+            $sql .= "{$columnSql} {$operator} ({$placeholders})";
+        } else {
+            $quotedValue = DB::getPdo()->quote($value);
+            $sql .= "{$columnSql} {$operator} {$quotedValue}";
+        }
 
-        return DB::raw($sql)->getValue($query->getGrammar());
+        $sql .= " THEN {$thenSql} ELSE {$elseSql} END";
+
+        return DB::raw($sql);
     }
 
     public function toArray(): array
@@ -49,6 +69,7 @@ class CaseExpression implements Expression
             'type' => 'case',
             'when' => $this->when,
             'then' => $this->then->toArray(),
+            'else' => $this->else ? $this->else->toArray() : null,
         ];
     }
 }

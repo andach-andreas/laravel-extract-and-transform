@@ -7,7 +7,9 @@ use Andach\ExtractAndTransform\Connectors\ConnectorConfigDefinition;
 use Andach\ExtractAndTransform\Data\RemoteDataset;
 use Andach\ExtractAndTransform\Data\RemoteField;
 use Andach\ExtractAndTransform\Data\RemoteSchema;
-use OpenSpout\Reader\Common\Creator\ReaderEntityFactory;
+use OpenSpout\Reader\CSV\Reader as CsvReader;
+use OpenSpout\Reader\ODS\Reader as OdsReader;
+use OpenSpout\Reader\XLSX\Reader as XlsxReader;
 
 class ExcelConnector extends BaseConnector
 {
@@ -39,7 +41,7 @@ class ExcelConnector extends BaseConnector
     public function datasets(array $config): array
     {
         $path = $config['path'] ?? '';
-        $reader = ReaderEntityFactory::createReaderFromFile($path);
+        $reader = $this->createReader($path);
         $reader->open($path);
 
         $datasets = [];
@@ -54,14 +56,16 @@ class ExcelConnector extends BaseConnector
     public function streamRows(RemoteDataset $dataset, array $config, array $options = []): iterable
     {
         $path = $config['path'] ?? '';
-        $reader = ReaderEntityFactory::createReaderFromFile($path);
+        $reader = $this->createReader($path);
         $reader->open($path);
 
-        $sheetIndex = $dataset->meta['index'] ?? 0;
+        $sheetIndex = $dataset->meta['index'] ?? null;
+        $identifier = $dataset->identifier;
         $header = [];
 
         foreach ($reader->getSheetIterator() as $sheet) {
-            if ($sheet->getIndex() !== $sheetIndex) {
+            // Prioritize identifier (Sheet Name) match, fallback to index if explicitly provided
+            if ($sheet->getName() !== $identifier && ($sheetIndex === null || $sheet->getIndex() !== $sheetIndex)) {
                 continue;
             }
 
@@ -85,14 +89,16 @@ class ExcelConnector extends BaseConnector
     public function inferSchema(RemoteDataset $dataset, array $config): RemoteSchema
     {
         $path = $config['path'] ?? '';
-        $reader = ReaderEntityFactory::createReaderFromFile($path);
+        $reader = $this->createReader($path);
         $reader->open($path);
 
-        $sheetIndex = $dataset->meta['index'] ?? 0;
+        $sheetIndex = $dataset->meta['index'] ?? null;
+        $identifier = $dataset->identifier;
         $fields = [];
 
         foreach ($reader->getSheetIterator() as $sheet) {
-            if ($sheet->getIndex() !== $sheetIndex) {
+            // Prioritize identifier (Sheet Name) match, fallback to index if explicitly provided
+            if ($sheet->getName() !== $identifier && ($sheetIndex === null || $sheet->getIndex() !== $sheetIndex)) {
                 continue;
             }
 
@@ -118,5 +124,17 @@ class ExcelConnector extends BaseConnector
         $reader->close();
 
         return new RemoteSchema($fields);
+    }
+
+    private function createReader(string $path)
+    {
+        $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+
+        return match ($extension) {
+            'xlsx' => new XlsxReader(),
+            'ods' => new OdsReader(),
+            'csv' => new CsvReader(),
+            default => throw new \RuntimeException("Unsupported file extension: $extension"),
+        };
     }
 }

@@ -53,9 +53,24 @@ class LegacyExcelConnector extends BaseConnector
     {
         $path = $config['path'] ?? '';
         $spreadsheet = IOFactory::load($path);
-        $sheet = $spreadsheet->getSheet($dataset->meta['index'] ?? 0);
+
+        // Try to find sheet by identifier (name) first
+        $sheet = $spreadsheet->getSheetByName($dataset->identifier);
+
+        // Fallback to index if name not found, but only if index is explicitly provided
+        // Or default to 0 if neither found?
+        // Failing test relies on identifier being correct but index missing.
+        // So getSheetByName should work.
+
+        if ($sheet === null) {
+             $sheet = $spreadsheet->getSheet($dataset->meta['index'] ?? 0);
+        }
 
         $rows = $sheet->toArray();
+        if (empty($rows)) {
+            return;
+        }
+
         $header = array_shift($rows); // Remove header
 
         foreach ($rows as $row) {
@@ -71,7 +86,11 @@ class LegacyExcelConnector extends BaseConnector
     {
         $path = $config['path'] ?? '';
         $spreadsheet = IOFactory::load($path);
-        $sheet = $spreadsheet->getSheet($dataset->meta['index'] ?? 0);
+
+        $sheet = $spreadsheet->getSheetByName($dataset->identifier);
+        if ($sheet === null) {
+            $sheet = $spreadsheet->getSheet($dataset->meta['index'] ?? 0);
+        }
 
         $rows = $sheet->toArray();
         $header = $rows[0] ?? [];

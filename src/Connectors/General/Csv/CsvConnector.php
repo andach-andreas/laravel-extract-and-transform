@@ -27,14 +27,23 @@ class CsvConnector extends BaseConnector
         return [
             new ConnectorConfigDefinition(key: 'path', label: 'File Path', type: 'text', required: true, help: 'Absolute path to the CSV file.'),
             new ConnectorConfigDefinition(key: 'delimiter', label: 'Delimiter', type: 'text', required: false, help: 'Default: ,'),
+            new ConnectorConfigDefinition(key: 'disk', label: 'Storage Disk', type: 'text', required: false, help: 'Optional: filesystem disk name (e.g. s3, local)'),
         ];
     }
 
     public function test(array $config): void
     {
         $path = $config['path'] ?? '';
-        if (! file_exists($path)) {
-            throw new \RuntimeException("File not found at path: {$path}");
+        $disk = $config['disk'] ?? null;
+
+        if ($disk) {
+            if (!Storage::disk($disk)->exists($path)) {
+                throw new \RuntimeException("File not found at path: {$path} on disk {$disk}");
+            }
+        } else {
+            if (! file_exists($path)) {
+                throw new \RuntimeException("File not found at path: {$path}");
+            }
         }
     }
 
@@ -50,12 +59,7 @@ class CsvConnector extends BaseConnector
 
     public function streamRows(RemoteDataset $dataset, array $config, array $options = []): iterable
     {
-        $path = $config['path'] ?? '';
-        $delimiter = $config['delimiter'] ?? ',';
-
-        $csv = Reader::createFromPath($path, 'r');
-        $csv->setDelimiter($delimiter);
-        $csv->setHeaderOffset(0);
+        $csv = $this->createReader($config);
 
         foreach ($csv->getRecords() as $record) {
             yield $record;
@@ -64,12 +68,7 @@ class CsvConnector extends BaseConnector
 
     public function inferSchema(RemoteDataset $dataset, array $config): RemoteSchema
     {
-        $path = $config['path'] ?? '';
-        $delimiter = $config['delimiter'] ?? ',';
-
-        $csv = Reader::createFromPath($path, 'r');
-        $csv->setDelimiter($delimiter);
-        $csv->setHeaderOffset(0);
+        $csv = $this->createReader($config);
 
         $header = $csv->getHeader();
         $firstRow = $csv->fetchOne(); // Get first row to guess types
@@ -82,6 +81,32 @@ class CsvConnector extends BaseConnector
         }
 
         return new RemoteSchema($fields);
+    }
+
+    private function createReader(array $config): Reader
+    {
+        $path = $config['path'] ?? '';
+        $delimiter = $config['delimiter'] ?? ',';
+        $disk = $config['disk'] ?? null;
+
+        try {
+            if ($disk) {
+                // Ensure file exists or throw specific error
+                // We use readStream to get a resource handle
+                $stream = Storage::disk($disk)->readStream($path);
+                $csv = Reader::createFromStream($stream);
+            } else {
+                $csv = Reader::createFromPath($path, 'r');
+            }
+        } catch (\Throwable $e) {
+            // Rethrow as RuntimeException with context to match expected behavior
+            throw new \RuntimeException("Failed to open stream for CSV file on disk [" . ($disk ?? 'local') . "]: $path", 0, $e);
+        }
+
+        $csv->setDelimiter($delimiter);
+        $csv->setHeaderOffset(0);
+
+        return $csv;
     }
 
     private function guessType(?string $value): string
