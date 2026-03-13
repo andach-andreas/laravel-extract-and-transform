@@ -2,6 +2,8 @@
 
 namespace Andach\ExtractAndTransform\Transform;
 
+use Andach\ExtractAndTransform\Transform\Expressions\CaseExpression;
+use Andach\ExtractAndTransform\Transform\Expressions\CoalesceExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\ColumnExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\ConcatExpression;
 use Andach\ExtractAndTransform\Transform\Expressions\LookupExpression;
@@ -21,7 +23,7 @@ class ExpressionFactory
         }
 
         return match ($config['type']) {
-            'col', 'column' => new ColumnExpression($config['column']),
+            'column' => new ColumnExpression($config['column']),
             'concat' => new ConcatExpression(
                 array_map(fn ($part) => self::make($part), $config['parts'])
             ),
@@ -41,6 +43,13 @@ class ExpressionFactory
                 $config['function'],
                 self::make($config['column']),
                 $config['arguments'] ?? []
+            ),
+            'coalesce' => new CoalesceExpression(
+                array_map(fn ($expr) => self::make($expr), $config['expressions'])
+            ),
+            'case' => new CaseExpression(
+                $config['when'],
+                self::make($config['then'])
             ),
             default => throw new InvalidArgumentException("Unknown expression type: {$config['type']}"),
         };
